@@ -1,0 +1,4 @@
+project_id = "ooqqvzftomecnylpsary"
+
+[functions.award_points]
+verify_jwt = true

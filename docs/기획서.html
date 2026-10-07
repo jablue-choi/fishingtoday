@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>낚시 기록·추천 앱 기획서 v0.1</title>
+<style>
+  :root{
+    --paper:#ECEDEA; --frame:#2B2D2A; --ink:#2B2D2A; --mute:#8A8D86;
+    --box:#D6D8D3; --box2:#C3C6C0; --line:#9FA29B; --note:#1F5FBF; --p2:#B8531E;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);
+    font-family:"Pretendard","Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif;font-size:15px;line-height:1.6}
+  .wrap{max-width:1500px;margin:0 auto;padding:0 28px}
+  .doc{max-width:860px}
+
+  /* ── 문서 ── */
+  .cover{padding:56px 0 32px;border-bottom:2px solid var(--ink)}
+  .cover .ver{color:var(--mute);font-size:13px}
+  h1{font-size:34px;font-weight:700;margin:6px 0 10px;letter-spacing:-.02em;line-height:1.2}
+  .cover p{margin:0;max-width:620px;color:#4a4d47}
+  .toc{display:flex;gap:18px;flex-wrap:wrap;margin-top:22px;font-size:13px}
+  .toc a{color:var(--ink);text-decoration:none;border-bottom:1px solid var(--line);padding-bottom:1px}
+
+  section.part{padding:44px 0 10px}
+  h2{font-size:24px;font-weight:700;margin:0 0 6px;letter-spacing:-.01em}
+  h2 + .sub{color:var(--mute);margin:0 0 22px;font-size:14px}
+  h3{font-size:17px;font-weight:700;margin:30px 0 8px}
+  h3 .tag{display:inline-block;font-size:11px;font-weight:600;border:1.5px solid var(--ink);border-radius:999px;padding:1px 8px;margin-left:8px;vertical-align:2px}
+  h3 .tag.p2{border-color:var(--p2);color:var(--p2)}
+  p{margin:0 0 10px}
+  ol,ul{margin:0 0 10px;padding-left:22px}
+  li{margin:3px 0}
+  li ul{margin-top:2px}
+  table{border-collapse:collapse;width:100%;font-size:14px;margin:8px 0 14px}
+  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--box2);vertical-align:top}
+  th{font-weight:600;background:var(--box);border-bottom:1.5px solid var(--line)}
+  .persona{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin:10px 0 6px}
+  .persona div{background:#fff;border-radius:10px;padding:14px 16px}
+  .persona b{display:block;margin-bottom:4px}
+  .persona span{color:var(--mute);font-size:13px}
+  .callout{border-left:3px solid var(--p2);background:#fff;padding:12px 16px;border-radius:0 10px 10px 0;margin:14px 0}
+  .callout b{color:var(--p2)}
+  .phase{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:12px 0}
+  .phase div{background:#fff;border-radius:10px;padding:14px 16px}
+  .phase h4{margin:0 0 8px;font-size:15px}
+  .phase .p2 h4{color:var(--p2)}
+  .phase ul{margin:0;padding-left:18px;font-size:14px}
+
+  /* ── 와이어프레임 ── */
+  .legend{display:flex;gap:18px;margin:-10px 0 20px;color:var(--mute);font-size:12px;flex-wrap:wrap}
+  .legend span::before{content:"";display:inline-block;width:14px;height:14px;vertical-align:-2px;margin-right:6px;border-radius:3px}
+  .legend .l1::before{background:var(--box)}
+  .legend .l2::before{background:repeating-linear-gradient(45deg,var(--box2) 0 3px,var(--box) 3px 6px)}
+  .legend .l3::before{border:1.5px dashed var(--note);background:transparent}
+  .legend .l4::before{border:1.5px solid var(--p2);background:transparent}
+  .board{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:40px 28px;padding:10px 0 20px}
+  .screen{display:flex;flex-direction:column;gap:10px}
+  .screen h4{font-size:15px;margin:0;font-weight:700}
+  .screen h4 small{display:block;color:var(--mute);font-weight:400;font-size:12px;margin-top:2px}
+  .screen.phase2 h4 small{color:var(--p2)}
+  .phone{background:#fff;border:2px solid var(--frame);border-radius:30px;padding:14px 12px 16px;width:100%;max-width:300px;min-height:600px;display:flex;flex-direction:column;gap:9px;position:relative;font-size:14px}
+  .phase2 .phone{border-color:var(--p2);border-style:dashed}
+  .phone::before{content:"";width:60px;height:5px;border-radius:3px;background:var(--frame);margin:0 auto 4px}
+  .phase2 .phone::before{background:var(--p2)}
+  .bar{display:flex;justify-content:space-between;align-items:center;font-size:13px;font-weight:600}
+  .bar .back{width:22px;height:22px;border:1.5px solid var(--ink);border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px}
+  .box{background:var(--box);border-radius:8px;padding:10px;min-height:38px;display:flex;align-items:center;justify-content:center;text-align:center;font-size:12px;color:#3f423d;line-height:1.4}
+  .box.img{background:repeating-linear-gradient(45deg,var(--box2) 0 3px,var(--box) 3px 6px);color:#5b5e58}
+  .box.tall{min-height:120px}
+  .box.left{justify-content:flex-start;text-align:left}
+  .box.col{flex-direction:column;align-items:flex-start;gap:4px}
+  .row{display:flex;gap:8px}
+  .row > *{flex:1}
+  .btn{background:var(--ink);color:#fff;border-radius:10px;padding:12px;text-align:center;font-weight:600;font-size:13px}
+  .btn.ghost{background:transparent;border:1.5px solid var(--ink);color:var(--ink)}
+  .btn.kakao{background:#E8D96B;color:#2B2D2A}
+  .btn.naver{background:#8DB686;color:#fff}
+  .label{font-size:11px;color:var(--mute);margin-top:4px}
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{border:1.5px solid var(--line);border-radius:999px;padding:4px 10px;font-size:11px}
+  .chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .kv{display:flex;justify-content:space-between;font-size:12px;padding:6px 0;border-bottom:1px solid var(--box)}
+  .kv b{font-weight:600}
+  .tabs{margin-top:auto;display:flex;justify-content:space-around;border-top:1.5px solid var(--box2);padding-top:10px;font-size:10px;color:var(--mute)}
+  .tabs span{display:flex;flex-direction:column;align-items:center;gap:4px}
+  .tabs span::before{content:"";width:18px;height:18px;border-radius:5px;background:var(--box2)}
+  .tabs .on{color:var(--ink);font-weight:600}
+  .tabs .on::before{background:var(--ink)}
+  .warn{border:2px solid var(--ink);border-radius:12px;padding:12px;background:#fff}
+  .warn h5{margin:0 0 6px;font-size:14px}
+  .bigpt{font-size:34px;font-weight:700;letter-spacing:-.02em;line-height:1}
+  .pill{display:inline-block;border:1.5px solid var(--ink);border-radius:999px;padding:2px 8px;font-size:11px;font-weight:600}
+  .note{border:1.5px dashed var(--note);color:var(--note);border-radius:8px;padding:8px 10px;font-size:12px;line-height:1.4}
+  .note b{display:block;font-weight:600;margin-bottom:2px}
+  .note.p2{border-color:var(--p2);color:var(--p2);border-style:solid}
+  .dim{position:absolute;inset:0;background:rgba(43,45,42,.35);border-radius:28px}
+  .sheet{position:absolute;left:10px;right:10px;bottom:14px;background:#fff;border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:8px}
+  footer{padding:30px 0 70px;color:var(--mute);font-size:13px}
+  @media print{ body{background:#fff} .phone{break-inside:avoid} section.part{break-before:page} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ───────────── 표지 ───────────── -->
+  <div class="cover doc">
+    <div class="ver">기획서 v0.1 · 2026-10-07 · 작성: 위드</div>
+    <h1>낚시 기록·추천 앱</h1>
+    <p>현위치를 찍으면 날씨·물때가 자동으로 들어가고, 어종·사이즈·마릿수·채비를 체크하면 기록이 쌓이는 앱. 기록은 스코어와 포인트가 되고, 쌓인 데이터로 다음 출조지와 예상 포인트를 추천한다.</p>
+    <div class="toc">
+      <a href="#scope">1. 범위와 단계</a>
+      <a href="#persona">2. 페르소나</a>
+      <a href="#scenario">3. 유저 시나리오</a>
+      <a href="#exception">4. 예외 시나리오</a>
+      <a href="#flow">5. 화면 흐름</a>
+      <a href="#wire">6. 화면별 와이어프레임</a>
+    </div>
+  </div>
+
+  <!-- ───────────── 1. 범위 ───────────── -->
+  <section class="part doc" id="scope">
+    <h2>1. 범위와 단계</h2>
+    <p class="sub">1차에서는 기록·추천·포인트 적립까지. 포인트 사용과 이벤트는 2차.</p>
+    <div class="phase">
+      <div>
+        <h4>1차 — 이번 작업</h4>
+        <ul>
+          <li>카카오·네이버 간편가입</li>
+          <li>현위치 기반 자동 입력 (날짜, 날씨, 기온, 바람, 물때, 만조·간조)</li>
+          <li>조과 체크 기록 (어종, 사이즈, 마릿수, 방법, 미끼, 사진, 꽝)</li>
+          <li>금어기·금지체장 경고와 방생 기록</li>
+          <li>사진 인증 → 포인트 <b>적립</b> (잔액 표시, 적립 내역)</li>
+          <li>유저별 스코어, 어종별 최대어, 배지</li>
+          <li>다음 출조지 추천, 예상 포인트 히트맵</li>
+          <li>주변 화장실·식당·편의점·낚시점·주차</li>
+        </ul>
+      </div>
+      <div class="p2">
+        <h4>2차 — 나중에</h4>
+        <ul>
+          <li>포인트샵: 미끼 교환 (제휴 낚시점 바코드 쿠폰)</li>
+          <li>이벤트 응모와 추첨, 쿠폰함</li>
+          <li>동호회 그룹 랭킹</li>
+          <li>사진 자 인식(사이즈 자동 측정)</li>
+        </ul>
+      </div>
+    </div>
+    <div class="callout"><b>1차에서 포인트는 "쌓이기만" 한다.</b> 사용처가 없어도 잔액과 적립 내역은 보여주고, 포인트샵 탭 자리는 "준비 중"으로 비워둔다. 2차에서 사용처가 열려도 1차에 쌓인 포인트는 그대로 쓸 수 있다는 점을 가입 시 안내한다.</div>
+  </section>
+
+  <!-- ───────────── 2. 페르소나 ───────────── -->
+  <section class="part doc" id="persona">
+    <h2>2. 페르소나</h2>
+    <p class="sub">세 명의 사용자를 기준으로 시나리오를 쓴다.</p>
+    <div class="persona">
+      <div><b>민수 · 34세 · 입문 2년차</b><span>방파제·갯바위 루어. 어디 가야 잡히는지 몰라 매번 유튜브를 뒤진다. 추천 기능의 주 사용자.</span></div>
+      <div><b>정호 · 52세 · 20년 경력</b><span>선상·찌낚시. 수첩에 조과를 적어 왔다. 기록을 쌓고 실력을 비교하고 싶다. 스코어·최대어 기록의 주 사용자.</span></div>
+      <div><b>지은 · 41세 · 가족 동반</b><span>아이와 함께 간다. 화장실·식당·주차가 조과만큼 중요하다. 주변 편의시설의 주 사용자.</span></div>
+    </div>
+  </section>
+
+  <!-- ───────────── 3. 시나리오 ───────────── -->
+  <section class="part doc" id="scenario">
+    <h2>3. 유저 시나리오</h2>
+    <p class="sub">출조 전 → 현장 → 출조 후 순서. 각 시나리오 끝의 번호는 대응하는 와이어프레임 화면이다.</p>
+
+    <h3>시나리오 0. 간편가입 <span class="tag">1차</span></h3>
+    <ol>
+      <li>민수가 앱을 처음 열면 <b>카카오로 시작 / 네이버로 시작</b> 버튼 두 개만 보인다. 이메일 가입은 없다.</li>
+      <li>카카오를 누르면 카카오 로그인 → 동의 → 바로 홈으로 이동한다.</li>
+      <li>홈 진입 후 1회만 닉네임과 선호 낚시 방법을 묻는다. 건너뛰기 가능.</li>
+      <li>가입 없이 <b>둘러보기</b>를 누르면 날씨·물때·추천만 볼 수 있고, 기록과 포인트는 로그인을 유도한다.</li>
+    </ol>
+    <p class="label">→ 화면 1</p>
+
+    <h3>시나리오 1. 다음 출조지 추천 <span class="tag">1차</span></h3>
+    <ol>
+      <li>금요일 밤, 민수가 홈에서 <b>이번 주말 어디 갈까?</b>를 누른다.</li>
+      <li>앱이 민수의 과거 기록(선호 어종·방법·이동 거리), 주말 예보와 물때, 다른 유저의 최근 공개 조황, 꽝 기록을 종합한다.</li>
+      <li>추천 카드 3개가 뜬다. 예: "영흥도 진두항, 9물로 물때 좋음, 최근 3일 우럭 12건, 차로 1시간 10분, 화장실 50m".</li>
+      <li>카드를 누르면 포인트 상세로 들어간다.</li>
+    </ol>
+    <p class="label">→ 화면 2, 3</p>
+
+    <h3>시나리오 2. 포인트 상세 — 물때·금어기·편의시설 <span class="tag">1차</span></h3>
+    <ol>
+      <li>상세 화면 상단에 예상 포인트 히트맵(최근 조과 밀집도)이 보인다. 공개 설정된 기록만, 좌표 대신 반경으로 표시해 개인 포인트가 노출되지 않게 한다.</li>
+      <li>그 아래 해당 날짜의 물때, 만조·간조 시각, 예보, 추천 채비가 있다.</li>
+      <li><b>이 시기 잡으면 안 되는 어종</b> 블록에 금어기 어종과 금지체장이 미리 표시된다. 예: "감성돔 25cm 미만 방생, 대구 금어기 1/16~2/15".</li>
+      <li>주변 화장실·편의점·식당·낚시점까지의 거리가 한 줄로 보인다.</li>
+      <li><b>출조 일정 저장</b>을 누르면 전날 저녁에 예보와 함께 알림이 온다.</li>
+    </ol>
+    <p class="label">→ 화면 4</p>
+
+    <h3>시나리오 3. 현장에서 조과 기록 <span class="tag">1차</span></h3>
+    <ol>
+      <li>토요일 아침, 민수가 방파제에 도착해 <b>현위치 찍기</b>를 누른다.</li>
+      <li>GPS로 위치를 잡고 다음 항목이 자동으로 채워진다: 날짜·시간, 날씨, 기온, 풍향·풍속, 물때, 만조·간조 시각, 수온. 자동 입력 영역은 점선 박스로 구분해 "내가 안 쳤는데 들어간 값"임을 보여준다.</li>
+      <li>체크 방식으로 조과를 입력한다.
+        <ul>
+          <li>어종: 자주 잡는 어종이 앞에 오는 칩. 없으면 + 로 검색</li>
+          <li>사이즈: cm 직접 입력 또는 슬라이더</li>
+          <li>마릿수: − / + 버튼</li>
+          <li>낚시 방법: 찌 / 원투 / 루어 / 선상 / 에깅</li>
+          <li>미끼: 갯지렁이 / 크릴 / 웜 / 메탈지그 등</li>
+        </ul>
+      </li>
+      <li>한 마리도 못 잡은 날은 <b>꽝으로 기록</b>을 누른다. 꽝도 추천 정확도에 쓰이는 데이터다.</li>
+      <li>통신이 안 되는 곳이면 임시 저장했다가, 연결되면 날씨·물때를 자동 보정한다.</li>
+    </ol>
+    <p class="label">→ 화면 5</p>
+
+    <h3>시나리오 4. 금어기·금지체장 경고 <span class="tag">1차</span></h3>
+    <ol>
+      <li>민수가 어종에서 감성돔, 사이즈에 22cm를 넣는다.</li>
+      <li>저장 전에 바텀시트가 올라온다: <b>"감성돔 22cm는 방생 대상이에요 — 금지체장 25cm 미만"</b>. 금어기 어종이면 금어기 기간을 함께 보여준다.</li>
+      <li>선택지는 두 개. <b>방생하고 기록 남기기(+30P)</b> 또는 <b>어종 다시 선택</b>.</li>
+      <li>방생 기록을 택하면 조과가 아닌 방생으로 저장되고, 스코어와 포인트에 보너스가 붙는다. 규정을 지키는 쪽이 이득이 되게 설계한다.</li>
+    </ol>
+    <p class="label">→ 화면 6</p>
+
+    <h3>시나리오 5. 사진 인증과 포인트 적립 <span class="tag">1차</span></h3>
+    <ol>
+      <li>체크를 마치고 <b>다음: 사진 인증</b>을 누르면 카메라가 열린다. "물고기와 자를 함께 찍어주세요" 가이드가 뜬다.</li>
+      <li>저장 전 앱이 두 가지를 확인한다.
+        <ul>
+          <li>체크값 5개(어종·사이즈·마릿수·방법·미끼)가 모두 입력됐는가</li>
+          <li>사진 EXIF의 촬영 시각·위치가 지금 기록과 맞는가</li>
+        </ul>
+      </li>
+      <li>둘 다 통과하면 적립 예정 내역이 보인다: 기본 기록 20P + 사진 인증 30P + 첫 방문 포인트 10P = <b>60P</b>.</li>
+      <li><b>저장하고 60P 받기</b>를 누르면 기록 카드가 생기고 잔액이 1,240P → 1,300P로 바뀐다.</li>
+      <li>사진을 건너뛰면 기록은 저장되지만 포인트는 0P. "사진 없이 저장하면 포인트가 적립되지 않아요"를 미리 보여준다.</li>
+    </ol>
+    <table>
+      <tr><th>적립 항목</th><th>포인트</th><th>조건</th></tr>
+      <tr><td>기본 기록</td><td>20P</td><td>체크값 5개 모두 입력</td></tr>
+      <tr><td>사진 인증</td><td>30P</td><td>사진 1장 이상, EXIF 시각·위치 일치</td></tr>
+      <tr><td>첫 방문 포인트</td><td>10P</td><td>해당 포인트에 내 기록이 처음일 때</td></tr>
+      <tr><td>방생 기록</td><td>30P</td><td>금어기·금지체장 어종을 방생으로 기록</td></tr>
+      <tr><td>꽝 기록</td><td>5P</td><td>현장에서 꽝 저장 (사진 불필요)</td></tr>
+      <tr><td>하루 상한</td><td>200P</td><td>초과분은 적립되지 않음</td></tr>
+    </table>
+    <p class="label">→ 화면 7, 8</p>
+
+    <h3>시나리오 6. 스코어 확인 <span class="tag">1차</span></h3>
+    <ol>
+      <li>정호가 출조를 마치고 <b>내 기록</b> 탭을 연다.</li>
+      <li>이달 스코어, 월별 그래프, 어종별 최대어(PB), 배지가 보인다.</li>
+      <li>스코어 산식: 마릿수 + 사이즈 가중치 + 어종 난이도 + 방생 보너스 + 출조 꾸준함.</li>
+      <li>포인트와 스코어는 다르다. 포인트는 쓰는 재화, 스코어는 실력 지표라서 포인트를 써도 스코어는 줄지 않는다.</li>
+    </ol>
+    <p class="label">→ 화면 10</p>
+
+    <h3>시나리오 7. 주변 편의시설 <span class="tag">1차</span></h3>
+    <ol>
+      <li>지은이 아이와 낚시 중 <b>주변</b> 탭을 누른다.</li>
+      <li>화장실(거리, 개방 시간, 장애인 화장실 여부), 식당(영업 중 여부), 편의점, 낚시점, 주차장이 지도에 표시된다.</li>
+      <li>"가족 동반" 필터로 화장실·그늘막·주차가 가까운 포인트만 골라 본다.</li>
+    </ol>
+    <p class="label">→ 화면 9</p>
+
+    <h3>시나리오 8. 포인트샵 — 미끼 교환 <span class="tag p2">2차</span></h3>
+    <ol>
+      <li>정호가 1,300P를 모아 포인트샵에 들어간다.</li>
+      <li>"크릴 1kg 쿠폰 800P"를 교환하면 바코드 쿠폰이 발급된다.</li>
+      <li>제휴 낚시점 지도에서 가까운 매장을 골라, 출조 당일 바코드를 보여주고 수령한다. 배송 없음.</li>
+    </ol>
+    <p class="label">→ 화면 11 (2차)</p>
+
+    <h3>시나리오 9. 포인트샵 — 이벤트 응모 <span class="tag p2">2차</span></h3>
+    <ol>
+      <li>지은이 이벤트 탭에서 "선상 우럭 출조 1인권, 응모 100P, 마감 10/20, 당첨 3명"을 본다.</li>
+      <li>100P로 응모하면 응모 완료와 추첨일이 표시된다.</li>
+      <li>추첨일에 푸시 알림으로 결과를 받고, 당첨 시 쿠폰함에 들어온다.</li>
+    </ol>
+    <p class="label">→ 화면 11 (2차)</p>
+  </section>
+
+  <!-- ───────────── 4. 예외 ───────────── -->
+  <section class="part doc" id="exception">
+    <h2>4. 예외 시나리오</h2>
+    <p class="sub">현장은 통신과 GPS가 불안정하고, 포인트가 걸리면 가짜 기록이 생긴다.</p>
+    <table>
+      <tr><th style="width:42%">상황</th><th>대응</th></tr>
+      <tr><td>바다 위·외진 곳이라 통신 안 됨</td><td>오프라인 임시 저장, 연결되면 날씨·물때 자동 보정</td></tr>
+      <tr><td>GPS 오차</td><td>지도에서 핀 직접 조정</td></tr>
+      <tr><td>금어기·금지체장 어종 입력</td><td>방생 안내 바텀시트, 방생 기록 시 +30P</td></tr>
+      <tr><td>기상특보 발효</td><td>추천에서 제외하고 홈 상단에 경고 배너</td></tr>
+      <tr><td>사진 위치가 기록 위치와 500m 이상 차이</td><td>"현장에서 찍은 사진인가요?" 재확인 후 적립 보류, 기록은 저장</td></tr>
+      <tr><td>같은 사진을 다른 기록에 재사용</td><td>사진 해시로 차단, 포인트 미적립</td></tr>
+      <tr><td>하루 적립 상한(200P) 초과</td><td>기록은 저장, "오늘 적립 한도를 채웠어요" 안내</td></tr>
+      <tr><td>카카오·네이버 둘 다 가입 후 다른 계정으로 로그인</td><td>같은 휴대폰 번호면 계정 통합 제안</td></tr>
+      <tr><td>포인트샵 탭 진입 (1차)</td><td>"준비 중 — 지금 쌓은 포인트는 오픈 후 그대로 쓸 수 있어요" + 잔액·적립 내역</td></tr>
+    </table>
+  </section>
+
+  <!-- ───────────── 5. 흐름 ───────────── -->
+  <section class="part doc" id="flow">
+    <h2>5. 화면 흐름</h2>
+    <p class="sub">번호는 6장의 와이어프레임 화면 번호.</p>
+    <table>
+      <tr><th style="width:22%">단계</th><th>흐름</th></tr>
+      <tr><td>가입</td><td>1 간편가입 → 2 홈</td></tr>
+      <tr><td>출조 전</td><td>2 홈 → 3 추천 → 4 포인트 상세(물때·금어기·편의시설) → 일정 저장 → 전날 알림</td></tr>
+      <tr><td>현장</td><td>2 홈 [현위치 찍기] → 5 조과 기록 → (6 금어기 경고) → 7 사진 인증 → 8 저장·적립<br>어디서든 9 주변 탭</td></tr>
+      <tr><td>출조 후</td><td>8 저장 → 10 내 기록·스코어 → 공개 설정 시 4의 히트맵에 반영 → 3 추천 엔진 입력</td></tr>
+      <tr><td>2차</td><td>11 포인트샵 (미끼 교환 · 이벤트 응모)</td></tr>
+    </table>
+  </section>
+
+  <!-- ───────────── 6. 와이어프레임 ───────────── -->
+  <section class="part" id="wire">
+    <h2>6. 화면별 와이어프레임</h2>
+    <p class="sub">로파이. 색과 디자인은 없고, 각 화면에 무엇이 들어가고 어떤 순서로 이어지는지만 잡았다. 주황 점선 프레임은 2차.</p>
+    <div class="legend">
+      <span class="l1">UI 요소 자리</span>
+      <span class="l2">이미지 · 지도 · 사진</span>
+      <span class="l3">기획 메모</span>
+      <span class="l4">2차 작업</span>
+    </div>
+
+    <div class="board">
+
+      <!-- 1 -->
+      <div class="screen">
+        <h4>1. 시작 · 간편가입 <small>앱 첫 실행</small></h4>
+        <div class="phone">
+          <div class="box img tall" style="flex:1;min-height:200px">앱 로고 · 바다 일러스트</div>
+          <div style="font-size:18px;font-weight:700;text-align:center">잡은 만큼 쌓이는<br>낚시 기록</div>
+          <div class="label" style="text-align:center">기록할 때마다 포인트가 쌓여요</div>
+          <div class="btn kakao">카카오로 3초 만에 시작</div>
+          <div class="btn naver">네이버로 시작</div>
+          <div class="label" style="text-align:center">둘러보기 (로그인 없이 날씨·물때만)</div>
+          <div class="note"><b>메모</b>이메일 가입 없음. 닉네임·선호 낚시 방법은 가입 후 1회만 질문, 건너뛰기 가능.</div>
+        </div>
+      </div>
+
+      <!-- 2 -->
+      <div class="screen">
+        <h4>2. 홈 <small>오늘 출조 판단 + 포인트 잔액</small></h4>
+        <div class="phone">
+          <div class="bar"><span>안녕하세요, 민수님</span><span class="pill">1,240P</span></div>
+          <div class="box col left">
+            <div style="font-weight:700;font-size:13px">오늘 · 10월 7일 (수)</div>
+            <div>물때 <b>7물</b> · 만조 05:12 / 17:40</div>
+            <div>맑음 18°C · 북서풍 4m/s</div>
+          </div>
+          <div class="box left" style="justify-content:space-between"><span>이번 주말 어디 갈까?</span><span>→</span></div>
+          <div class="label">최근 기록</div>
+          <div class="row">
+            <div class="box img" style="min-height:80px">우럭 28cm<br>10/3 영흥도</div>
+            <div class="box img" style="min-height:80px">꽝<br>9/28 궁평항</div>
+          </div>
+          <div class="box left">이번 달 스코어 <b style="margin-left:auto">312점</b></div>
+          <div class="btn">현위치 찍고 기록 시작</div>
+          <div class="tabs"><span class="on">홈</span><span>지도</span><span>기록</span><span>포인트</span><span>내정보</span></div>
+        </div>
+      </div>
+
+      <!-- 3 -->
+      <div class="screen">
+        <h4>3. 추천 포인트 <small>주말 출조지 제안</small></h4>
+        <div class="phone">
+          <div class="bar"><span class="back">‹</span><span>이번 주말 어디 갈까?</span><span></span></div>
+          <div class="chips"><span class="chip on">토요일</span><span class="chip">일요일</span><span class="chip">차로 1시간 내</span></div>
+          <div class="box col left">
+            <div style="font-weight:700">① 영흥도 진두항 방파제</div>
+            <div>물때 좋음 (9물) · 최근 3일 우럭 12건</div>
+            <div>차로 1시간 10분 · 화장실 50m</div>
+          </div>
+          <div class="box col left">
+            <div style="font-weight:700">② 궁평항 서측</div>
+            <div>바람 약함 · 광어 조과 많음</div>
+            <div>차로 55분 · 주차 넉넉</div>
+          </div>
+          <div class="box col left">
+            <div style="font-weight:700">③ 대부도 방아머리</div>
+            <div>망둥어 피크 · 가족 동반 추천</div>
+          </div>
+          <div class="note"><b>추천 근거</b>내 기록(선호 어종·방법) + 물때 + 예보 + 공개 조황 + 꽝 기록</div>
+          <div class="tabs"><span class="on">홈</span><span>지도</span><span>기록</span><span>포인트</span><span>내정보</span></div>
+        </div>
+      </div>
+
+      <!-- 4 -->
+      <div class="screen">
+        <h4>4. 포인트 상세 <small>물때 · 금어기 · 편의시설</small></h4>
+        <div class="phone">
+          <div class="bar"><span class="back">‹</span><span>영흥도 진두항</span><span>♡</span></div>
+          <div class="box img" style="min-height:110px">지도 · 예상 포인트 히트맵</div>
+          <div class="kv"><span>토요일 물때</span><b>9물 · 만조 07:30 / 간조 13:50</b></div>
+          <div class="kv"><span>예보</span><b>맑음 17°C · 바람 3m/s</b></div>
+          <div class="kv"><span>추천 채비</span><b>웜 + 지그헤드 1/4oz</b></div>
+          <div class="box col left" style="border:1.5px solid var(--ink);background:#fff">
+            <div style="font-weight:700">이 시기 잡으면 안 되는 어종</div>
+            <div>감성돔 (25cm 미만 방생) · 대구 (금어기 1/16~2/15)</div>
+          </div>
+          <div class="label">주변</div>
+          <div class="row">
+            <div class="box">화장실<br>50m</div>
+            <div class="box">편의점<br>200m</div>
+            <div class="box">식당<br>3곳</div>
+            <div class="box">낚시점<br>1.2km</div>
+          </div>
+          <div class="btn">출조 일정 저장 · 전날 알림</div>
+        </div>
+      </div>
+
+      <!-- 5 -->
+      <div class="screen">
+        <h4>5. 조과 기록 <small>현위치 → 자동 입력 → 체크</small></h4>
+        <div class="phone">
+          <div class="bar"><span class="back">‹</span><span>조과 기록</span><span></span></div>
+          <div class="box img" style="min-height:70px">현위치 핀 · 영흥도 진두항 ✓</div>
+          <div class="box col left" style="background:#fff;border:1.5px dashed var(--line)">
+            <div class="label" style="margin:0">자동 입력됨</div>
+            <div>10/11 (토) 08:20 · 맑음 17°C</div>
+            <div>북서풍 3m/s · 9물 · 만조 07:30</div>
+          </div>
+          <div class="label">어종</div>
+          <div class="chips"><span class="chip on">우럭</span><span class="chip">광어</span><span class="chip">감성돔</span><span class="chip">망둥어</span><span class="chip">+</span></div>
+          <div class="label">사이즈 · 마릿수</div>
+          <div class="row"><div class="box">28 cm</div><div class="box">− 2 +</div></div>
+          <div class="label">낚시 방법</div>
+          <div class="chips"><span class="chip">찌</span><span class="chip">원투</span><span class="chip on">루어</span><span class="chip">선상</span><span class="chip">에깅</span></div>
+          <div class="label">미끼</div>
+          <div class="chips"><span class="chip">갯지렁이</span><span class="chip">크릴</span><span class="chip on">웜</span><span class="chip">메탈지그</span></div>
+          <div class="row">
+            <div class="btn ghost">꽝으로 기록</div>
+            <div class="btn">다음: 사진 인증</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 6 -->
+      <div class="screen">
+        <h4>6. 금어기 경고 <small>어종·사이즈 입력 직후 바텀시트</small></h4>
+        <div class="phone">
+          <div class="bar"><span class="back">‹</span><span>조과 기록</span><span></span></div>
+          <div class="box img" style="min-height:70px">현위치 핀</div>
+          <div class="label">어종</div>
+          <div class="chips"><span class="chip">우럭</span><span class="chip">광어</span><span class="chip on">감성돔</span></div>
+          <div class="row"><div class="box">22 cm</div><div class="box">− 1 +</div></div>
+          <div class="dim"></div>
+          <div class="sheet">
+            <div class="warn">
+              <h5>감성돔 22cm는 방생 대상이에요</h5>
+              <div style="font-size:12px">금지체장 25cm 미만 · 수산자원관리법</div>
+            </div>
+            <div class="btn">방생하고 기록 남기기 (+30P)</div>
+            <div class="btn ghost">어종 다시 선택</div>
+            <div class="note"><b>메모</b>금어기 어종은 금어기 기간을 표시. 방생 기록은 스코어·포인트 보너스로 규정 준수를 유도.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 7 -->
+      <div class="screen">
+        <h4>7. 사진 인증 · 포인트 적립 <small>체크값 + 사진이 있어야 적립</small></h4>
+        <div class="phone">
+          <div class="bar"><span class="back">‹</span><span>사진 인증</span><span></span></div>
+          <div class="box img tall" style="min-height:190px">카메라 뷰<br>물고기 + 자(줄자) 함께 촬영</div>
+          <div class="box col left">
+            <div>✓ 어종 · 사이즈 · 마릿수 · 방법 · 미끼 입력됨</div>
+            <div>✓ 사진 1장 첨부 → 인증 조건 충족</div>
+          </div>
+          <div class="box col left" style="background:#fff;border:1.5px solid var(--ink)">
+            <div style="font-weight:700">적립 예정 포인트</div>
+            <div>기본 기록 20P + 사진 인증 30P + 첫 방문 10P</div>
+            <div style="font-weight:700;margin-top:4px">= 60P</div>
+          </div>
+          <div class="btn">저장하고 60P 받기</div>
+          <div class="label" style="text-align:center">사진 없이 저장하면 기록만 남고 포인트는 없어요</div>
+          <div class="note"><b>어뷰징 방지</b>사진 EXIF 시각·위치가 기록과 맞아야 적립. 같은 사진 재사용 차단. 하루 200P 상한.</div>
+        </div>
+      </div>
+
+      <!-- 8 -->
+      <div class="screen">
+        <h4>8. 저장 완료 <small>기록 카드 · 포인트 · 스코어 변화</small></h4>
+        <div class="phone">
+          <div class="bar"><span></span><span>저장됐어요</span><span>✕</span></div>
+          <div class="box img" style="min-height:130px">조과 사진<br>우럭 28cm · 2마리</div>
+          <div class="kv"><span>영흥도 진두항</span><b>10/11 08:20</b></div>
+          <div class="kv"><span>루어 · 웜</span><b>맑음 · 9물</b></div>
+          <div class="row">
+            <div class="box col left"><div class="label" style="margin:0">포인트</div><div class="bigpt">+60</div><div>1,300P</div></div>
+            <div class="box col left"><div class="label" style="margin:0">스코어</div><div class="bigpt">+48</div><div>이달 360점</div></div>
+          </div>
+          <div class="box left">🏅 배지 획득 · 우럭 5마리 달성</div>
+          <div class="box left" style="justify-content:space-between"><span>이 포인트 공개할까요?</span><span class="pill">반경 공개</span></div>
+          <div class="row"><div class="btn ghost">친구에게 공유</div><div class="btn">내 기록 보기</div></div>
+        </div>
+      </div>
+
+      <!-- 9 -->
+      <div class="screen">
+        <h4>9. 주변 편의시설 <small>현장에서 바로 확인</small></h4>
+        <div class="phone">
+          <div class="bar"><span class="back">‹</span><span>주변</span><span></span></div>
+          <div class="chips"><span class="chip on">화장실</span><span class="chip">식당</span><span class="chip">편의점</span><span class="chip">낚시점</span><span class="chip">주차</span></div>
+          <div class="box img" style="min-height:230px">지도 · 현위치 + 시설 핀</div>
+          <div class="box col left"><div style="font-weight:600">진두항 공중화장실</div><div>50m · 24시간 · 장애인 화장실 있음</div></div>
+          <div class="box col left"><div style="font-weight:600">선착장 화장실</div><div>320m · 06:00~22:00</div></div>
+          <div class="box col left"><div style="font-weight:600">바다식당 (해물칼국수)</div><div>180m · 영업 중 · 11:00~20:00</div></div>
+          <div class="note"><b>메모</b>가족 동반 필터: 화장실·그늘막·주차 가까운 포인트만.</div>
+        </div>
+      </div>
+
+      <!-- 10 -->
+      <div class="screen">
+        <h4>10. 내 기록 · 스코어 · 포인트 내역 <small>1차에서 포인트는 여기서 확인</small></h4>
+        <div class="phone">
+          <div class="bar"><span>내 기록</span><span class="pill">1,300P</span></div>
+          <div class="row">
+            <div class="box col left"><div class="label" style="margin:0">이달 스코어</div><div class="bigpt">360</div></div>
+            <div class="box col left"><div class="label" style="margin:0">출조 횟수</div><div class="bigpt">7</div></div>
+          </div>
+          <div class="box img" style="min-height:80px">월별 스코어 그래프</div>
+          <div class="label">어종별 최대어</div>
+          <div class="kv"><span>우럭</span><b>31cm · 9/14</b></div>
+          <div class="kv"><span>광어</span><b>44cm · 8/2</b></div>
+          <div class="label">배지</div>
+          <div class="chips"><span class="chip on">우럭 5마리</span><span class="chip on">첫 방생</span><span class="chip">10회 출조</span></div>
+          <div class="label">포인트 적립 내역</div>
+          <div class="kv"><span>10/11 사진 인증 기록</span><b>+60P</b></div>
+          <div class="kv"><span>10/3 방생 기록</span><b>+30P</b></div>
+          <div class="note p2"><b>1차 안내 문구</b>"포인트 사용처는 준비 중이에요. 지금 쌓은 포인트는 오픈 후 그대로 쓸 수 있어요."</div>
+          <div class="tabs"><span>홈</span><span>지도</span><span class="on">기록</span><span>포인트</span><span>내정보</span></div>
+        </div>
+      </div>
+
+      <!-- 11 (2차) -->
+      <div class="screen phase2">
+        <h4>11. 포인트샵 <small>2차 — 미끼 교환 · 이벤트 응모</small></h4>
+        <div class="phone">
+          <div class="bar"><span>포인트샵</span><span class="pill">1,300P</span></div>
+          <div class="chips"><span class="chip on">미끼 교환</span><span class="chip">이벤트 응모</span><span class="chip">적립 내역</span></div>
+          <div class="row">
+            <div class="box col left"><div class="box img" style="width:100%;min-height:60px">상품</div><div style="font-weight:600">웜 세트 10개입</div><div>500P</div></div>
+            <div class="box col left"><div class="box img" style="width:100%;min-height:60px">상품</div><div style="font-weight:600">크릴 1kg 쿠폰</div><div>800P</div></div>
+          </div>
+          <div class="row">
+            <div class="box col left"><div class="box img" style="width:100%;min-height:60px">상품</div><div style="font-weight:600">지그헤드 세트</div><div>400P</div></div>
+            <div class="box col left"><div class="box img" style="width:100%;min-height:60px">상품</div><div style="font-weight:600">갯지렁이 1통</div><div>300P</div></div>
+          </div>
+          <div class="box col left" style="background:#fff;border:1.5px solid var(--ink)">
+            <div style="font-weight:700">이벤트 · 선상 우럭 출조 1인권</div>
+            <div>응모 100P · 마감 10/20 · 당첨 3명</div>
+          </div>
+          <div class="note p2"><b>2차 메모</b>미끼는 제휴 낚시점 바코드 쿠폰으로 발급 → 현장 수령, 배송 없음. 1차에서는 이 탭이 "준비 중" 화면.</div>
+          <div class="tabs"><span>홈</span><span>지도</span><span>기록</span><span class="on">포인트</span><span>내정보</span></div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <footer>v0.1 · 다음 단계: 데이터 구조(DB 스키마), 외부 API 목록(기상청·국립해양조사원 물때·카카오/네이버 로그인·지도), 포인트 적립 규칙 상세.</footer>
+</div>
+</body>
+</html>
