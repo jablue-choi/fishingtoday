@@ -5,10 +5,13 @@ import SearchBar from '../components/SearchBar'
 import FishingIndexCard from '../components/FishingIndexCard'
 import ClosedSeasonCard from '../components/ClosedSeasonCard'
 import SeasonCard from '../components/SeasonCard'
+import { getLastPos } from '../lib/fishingIndex'
+import { tideAt } from '../lib/tide'
 
 export default function Home() {
   const [nick, setNick] = useState('')
   const [balance, setBalance] = useState(0)
+  const [tide] = useState(() => tideAt(getLastPos()))
 
   useEffect(() => {
     (async () => {
@@ -28,6 +31,11 @@ export default function Home() {
         <h1 style={{ margin: 0 }}>안녕하세요, {nick}님</h1>
         <span className="pill" style={{ flex: 0 }}>{balance.toLocaleString()}P</span>
       </div>
+      {tide && (
+        <div style={{ fontSize: 13, color: 'var(--mute)', margin: '-6px 0 12px' }}>
+          오늘 물때 <b style={{ color: 'var(--ink)' }}>{tide.label}</b>{tide.phase ? ` (${tide.phase})` : ''} · {tide.system} 기준
+        </div>
+      )}
       <FishingIndexCard />
       <SeasonCard />
       <ClosedSeasonCard />

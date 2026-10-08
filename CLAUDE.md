@@ -24,7 +24,7 @@
 - `scripts/import-spots.mjs` 공공데이터 포인트 CSV → spots (`npm run import:spots -- rock|boat|ground 파일.csv [--dry]`)
 - `src/pages` Home / Search / LogCatch / MyRecords / NicknameSetup(첫 로그인)
 - `src/components` MapPicker, HistoryMap, SearchBar, FishingIndexCard, ClosedSeasonCard, SeasonCard
-- `src/lib` supabase, geo, weather, points, records, search, kakaoMap, fishingIndex, rules, profile, seasons
+- `src/lib` supabase, geo, weather, points, records, search, kakaoMap, fishingIndex, rules, profile, seasons, tide(음력 물때)
 
 ## 키·시크릿 (값은 절대 코드·채팅·커밋에 넣지 말 것)
 - `.env.local` (git 제외): VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, VITE_KAKAO_JS_KEY

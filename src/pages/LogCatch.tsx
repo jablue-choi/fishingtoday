@@ -8,6 +8,7 @@ import MapPicker from '../components/MapPicker'
 import { regionName } from '../lib/kakaoMap'
 import { saveLastPos } from '../lib/fishingIndex'
 import { fetchRules, checkCatch, closedNow, type Rule } from '../lib/rules'
+import { tideAt } from '../lib/tide'
 
 type Species = { id: number; name_ko: string }
 type Code = { code: string; label: string }
@@ -77,6 +78,7 @@ export default function LogCatch() {
         method_code: zero ? null : form.method_code || null,
         bait_code: zero ? null : form.bait_code || null,
         weather: auto?.weather, temp_c: auto?.temp_c, wind_dir: auto?.wind_dir, wind_ms: auto?.wind_ms,
+        tide_mul: tideAt(pos)?.mul ?? null,
         auto_filled: !!auto,
       }).select('id').single()
       if (error) throw error
@@ -98,6 +100,7 @@ export default function LogCatch() {
   const checks = form.species_id ? checkCatch(rules, form.species_id, form.size_cm ? Number(form.size_cm) : null) : []
   const mustRelease = checks.some(c => c.level === 'ban' || c.level === 'size')
   const closedIds = closedNow(rules)
+  const tide = pos ? tideAt(pos) : null
 
   if (result) return (
     <div className="page">
@@ -120,7 +123,7 @@ export default function LogCatch() {
           <div className="card auto">
             <div className="label" style={{ margin: 0 }}>자동 입력됨</div>
             <div>{new Date().toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })} · {auto?.weather ?? '…'} {auto?.temp_c != null && `${auto.temp_c}°C`}</div>
-            <div>{auto?.wind_dir} {auto?.wind_ms != null && `${auto.wind_ms}m/s`} · 물때: 준비 중</div>
+            <div>{auto?.wind_dir} {auto?.wind_ms != null && `${auto.wind_ms}m/s`} · 물때 {tide ? `${tide.label}${tide.phase ? ` (${tide.phase})` : ''}` : '-'}</div>
           </div>
         </>
       )}

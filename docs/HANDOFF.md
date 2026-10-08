@@ -31,8 +31,8 @@
 ## 알려진 문제 / 해야 할 것 (우선순위 순)
 1. ~~시즌별 추천 어종~~ 완료 (0010)
 2. ~~실명 노출~~ 완료 (0009)
-3. **[다음 작업] 좌표 노출 구멍**: catch_logs RLS가 radius/public 기록을 원본 행(정확한 geom 포함)째 조회 허용 (anon도 가능). catch_logs select는 본인만으로 좁히고, 남의 기록은 public_catch_v를 security definer 뷰(또는 함수)로 제공. spot_heatmap도 같이 점검
-4. 물때: 기록 화면에 "물때: 준비 중". 바다낚시지수 응답의 물때(tdlvHrCn)나 바다누리 조석으로 catch_logs.tide_mul 채우기
+3. ~~좌표 노출 구멍~~ 완료 (0011: catch_logs 본인만, public_catch_v 소유자 권한 뷰, anon 기록 조회 차단)
+4. 물때: tide_mul은 음력(Intl dangi)으로 계산해 저장 완료 (src/lib/tide.ts, 서해 7물때식·그 외 8물때식, 홈·기록 화면 표시). **남은 것**: 만조·간조 시각(high_tide_at/low_tide_at)은 바다누리 조석 API 연동 필요
 5. 사진 EXIF 검증(exifr): 지금은 업로드만 하면 exif_ok=true
 6. 기록 저장 결과 화면의 적립 사유가 영문 코드(base_log 등)로 보임 → 한글 라벨 (MyRecords의 REASON 맵 재사용)
 7. 공공데이터 CSV 실제 적재(갯바위·선상 포인트, 전국낚시터) 후 홈 "주변 포인트"(rpc spots_near) 노출
