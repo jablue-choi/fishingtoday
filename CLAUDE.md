@@ -19,6 +19,7 @@
 - `supabase/functions/`
   - `award_points` 포인트·스코어 적립 (클라이언트는 point_ledger에 직접 못 씀)
   - `weather` 기상청 초단기실황 프록시 (KMA_SERVICE_KEY)
+  - `tide` 국립해양조사원 조석예보(고·저조, tideFcstHghLw) 프록시. obsCode 필수라 functions/tide/stations.ts(DT_·SO_·IE_ 175곳)에서 가장 가까운 지점을 골라 조회, 지점·날짜별 24시간 캐시(fishing_index_cache, gubun '조석:코드:날짜'). extrSe는 순번이라 고·저는 앞뒤 조위로 판정. 홈 만조·간조·곡선과 catch_logs.high_tide_at/low_tide_at에 사용(40km 넘으면 Open-Meteo로 대체)
   - `fishing_index` 국립해양조사원 지수 프록시 + 3시간 캐시. gubun: 갯바위·선상(바다낚시지수 fcstFishingv2), 바다여행(fcstSeaTripv2), 선박운항(shipIndex, category=AREA 필수, 좌표 없음 → 함수 안 권역 근사 좌표)
 - `supabase/seed_sample.sql` 개발용 샘플(유저 6명·기록 220건, is_sample=true). 서비스 전 삭제
 - `scripts/import-spots.mjs` 공공데이터 포인트 CSV → spots (`npm run import:spots -- rock|boat|ground 파일.csv [--dry]`)
@@ -26,7 +27,7 @@
 - 원본 데이터는 `data/` (git 제외). 해수부 공간데이터 좌표계는 EPSG:5179 → proj4로 WGS84 변환
 - `src/pages` Home / Search / LogCatch / MyRecords / NicknameSetup(첫 로그인)
 - `src/components` MapPicker, HistoryMap, SearchBar, FishingIndexCard, ClosedSeasonCard, SeasonCard, NearbySpotsCard
-- `src/lib` supabase, geo, weather, points, records, search, kakaoMap, fishingIndex, rules, profile, seasons, tide(음력 물때)
+- `src/lib` supabase, geo, weather, points, records, search, kakaoMap, fishingIndex, rules, profile, seasons, tide(음력 물때·조석예보), sun(일출·일몰 계산, API 없음)
 
 ## 키·시크릿 (값은 절대 코드·채팅·커밋에 넣지 말 것)
 - `.env.local` (git 제외): VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, VITE_KAKAO_JS_KEY

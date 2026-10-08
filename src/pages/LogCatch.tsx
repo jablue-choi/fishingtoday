@@ -11,7 +11,7 @@ import { fetchPastWeather, PAST_WEATHER_SOURCE } from '../lib/pastWeather'
 import { pulse } from '../lib/pulse'
 import DateTimeField, { toLocalInput } from '../components/DateTimeField'
 import { fetchRules, checkCatch, closedNow, banZonesAt, type Rule } from '../lib/rules'
-import { tideAt } from '../lib/tide'
+import { tideAt, fetchTideTable, nearestTideTimes } from '../lib/tide'
 import { identifyFish, CONFIDENCE_LABEL, type FishId } from '../lib/fishId'
 import { fetchSpecies, type Species } from '../lib/species'
 import SpeciesPicker from '../components/SpeciesPicker'
@@ -146,6 +146,8 @@ export default function LogCatch() {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       const region = await regionName(pos.lat, pos.lon)
+      // 만조·간조 스냅샷 (조석예보 못 불러와도 기록은 저장)
+      const tideTimes = await fetchTideTable(pos, at ?? new Date()).then(t => nearestTideTimes(t.extremes, at ?? new Date())).catch(() => null)
       const { data: log, error } = await supabase.from('catch_logs').insert({
         region,
         visibility: share ? 'radius' : 'private',
@@ -159,6 +161,7 @@ export default function LogCatch() {
         bait_code: zero ? null : form.bait_code || null,
         weather: auto?.weather, temp_c: auto?.temp_c, wind_dir: auto?.wind_dir, wind_ms: auto?.wind_ms,
         tide_mul: tideAt(pos, at)?.mul ?? null,
+        ...(tideTimes ?? {}),
         auto_filled: !!auto,
         ...(at ? { caught_at: at.toISOString() } : {}),
       }).select('id').single()

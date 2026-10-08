@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { tideAt } from '../lib/tide'
+import { tideAt, fetchTideTable, tideLevel, TIDE_SOURCE, type TideTable, type TideExtreme } from '../lib/tide'
 import { fetchMarineDash, nowHour, dirKo, MARINE_SOURCE, type MarineDash } from '../lib/marine'
 import { fetchFishingIndex, scoreClass, SCORE_RANK, type FishingIndex } from '../lib/fishingIndex'
 import { pulse } from '../lib/pulse'
+import { sunTimes } from '../lib/sun'
 import Icon from './Icon'
 
 type Pos = { lat: number; lon: number }
@@ -17,11 +18,13 @@ export default function TideHero({ pos, nick, onPickLocation, onUseGps }: { pos:
   const tide = tideAt(pos)
   const [dash, setDash] = useState<MarineDash | null>(null)
   const [idx, setIdx] = useState<FishingIndex | null>(null)
+  const [table, setTable] = useState<TideTable | null>(null)
 
   useEffect(() => {
-    setDash(null); setIdx(null)
+    setDash(null); setIdx(null); setTable(null)
     if (!pos) return
     fetchMarineDash(pos.lat, pos.lon).then(setDash).catch(() => setDash(null))
+    fetchTideTable(pos).then(setTable).catch(() => setTable(null))
     const today = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10)
     fetchFishingIndex('갯바위', pos, 20).then(d => {
       const near = d.items.filter(i => i.date === today)
@@ -33,9 +36,13 @@ export default function TideHero({ pos, nick, onPickLocation, onUseGps }: { pos:
   }, [pos?.lat, pos?.lon]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const now = dash ? nowHour(dash) : undefined
-  const chart = useMemo(() => dash ? buildChart(dash) : null, [dash])
-  const nextHigh = dash?.extremes.find(e => e.type === 'high' && e.time.getTime() > Date.now())
-  const nextLow = dash?.extremes.find(e => e.type === 'low' && e.time.getTime() > Date.now())
+  // 만조·간조와 곡선은 조석예보 우선, 못 불러오면 Open-Meteo 해수면 모델값
+  const chart = useMemo(() => table ? buildChart(khoaSeries(table.extremes), table.extremes)
+    : dash ? buildChart(dash.hours.filter(h => h.sea != null).map(h => ({ t: h.time.getTime(), v: h.sea! })), dash.extremes) : null, [table, dash])
+  const extremes = table?.extremes ?? dash?.extremes ?? []
+  const sun = pos ? sunTimes(pos.lat, pos.lon) : null
+  const nextHigh = extremes.find(e => e.type === 'high' && e.time.getTime() > Date.now())
+  const nextLow = extremes.find(e => e.type === 'low' && e.time.getTime() > Date.now())
   const rising = nextHigh && nextLow ? nextHigh.time < nextLow.time : null
 
   return (
@@ -101,9 +108,20 @@ export default function TideHero({ pos, nick, onPickLocation, onUseGps }: { pos:
                   <div className="item-row" style={{ background: 'rgba(30,41,59,.6)', borderRadius: 8, padding: '5px 8px' }}>
                     <span className="sub">다음 간조</span><b className="num" style={{ color: 'var(--tide-low)' }}>{nextLow ? hm(nextLow.time) : '-'}</b>
                   </div>
+                  {sun && <>
+                    <div className="item-row" style={{ background: 'rgba(30,41,59,.6)', borderRadius: 8, padding: '5px 8px' }}>
+                      <span className="sub">일출</span><b className="num">{sun.rise ? hm(sun.rise) : '-'}</b>
+                    </div>
+                    <div className="item-row" style={{ background: 'rgba(30,41,59,.6)', borderRadius: 8, padding: '5px 8px' }}>
+                      <span className="sub">일몰</span><b className="num">{sun.set ? hm(sun.set) : '-'}</b>
+                    </div>
+                  </>}
                 </div>
               </>
-            ) : <div className="sub">{dash ? '이 위치는 물때 곡선 자료가 없어요 (내륙·민물).' : '물때 곡선 불러오는 중…'}</div>}
+            ) : <>
+              <div className="sub">{dash || table ? '이 위치는 물때 곡선 자료가 없어요 (내륙·민물).' : '물때 곡선 불러오는 중…'}</div>
+              {sun && <div className="sub" style={{ marginTop: 4 }}>일출 <b className="num">{sun.rise ? hm(sun.rise) : '-'}</b> · 일몰 <b className="num">{sun.set ? hm(sun.set) : '-'}</b></div>}
+            </>}
           </div>
 
           <div className="metrics" style={{ margin: '10px 0' }}>
@@ -118,7 +136,11 @@ export default function TideHero({ pos, nick, onPickLocation, onUseGps }: { pos:
       <Link to="/log" className="btn" onPointerDown={pulse}>
         <Icon name="plus" size={20} />현위치 찍고 조과 기록하기<span className="tag">포인트 적립</span>
       </Link>
-      {pos && <div className="note" style={{ marginTop: 8 }}>물때 곡선·수온·파고·바람은 {MARINE_SOURCE} 참고값이에요. 실제 조석표와 다를 수 있어요.</div>}
+      {pos && <div className="note" style={{ marginTop: 8 }}>
+        {table
+          ? <>만조·간조는 {TIDE_SOURCE}({table.station.name} 기준, {table.station.dist_km}km), 수온·파고·바람은 {MARINE_SOURCE} 참고값이에요.</>
+          : <>물때 곡선·수온·파고·바람은 {MARINE_SOURCE} 참고값이에요. 실제 조석표와 다를 수 있어요.</>}
+      </div>}
     </div>
   )
 }
@@ -133,16 +155,27 @@ function Metric({ icon, color, label, value, unit }: { icon: 'thermo' | 'wave' |
   )
 }
 
+/** 조석예보 고·저조를 20분 간격 곡선 점으로 */
+function khoaSeries(ex: TideExtreme[]) {
+  const start = new Date(); start.setHours(0, 0, 0, 0)
+  const out: { t: number; v: number }[] = []
+  for (let t = start.getTime(); t <= start.getTime() + 24 * 3600e3; t += 20 * 60e3) {
+    const v = tideLevel(ex, t)
+    if (v != null) out.push({ t, v })
+  }
+  return out
+}
+
 /** 오늘 0~24시 해수면을 300x64 곡선으로 */
-function buildChart(d: MarineDash) {
+function buildChart(series: { t: number; v: number }[], extremes: { time: Date; type: 'high' | 'low' }[]) {
   const start = new Date(); start.setHours(0, 0, 0, 0)
   const end = start.getTime() + 24 * 3600e3
-  const pts = d.hours.filter(h => h.sea != null && h.time.getTime() >= start.getTime() && h.time.getTime() <= end)
+  const pts = series.filter(p => p.t >= start.getTime() && p.t <= end)
   if (pts.length < 6) return null
-  const min = Math.min(...pts.map(p => p.sea!)), max = Math.max(...pts.map(p => p.sea!))
+  const min = Math.min(...pts.map(p => p.v)), max = Math.max(...pts.map(p => p.v))
   const x = (t: number) => ((t - start.getTime()) / (end - start.getTime())) * 300
   const y = (v: number) => 56 - ((v - min) / Math.max(0.01, max - min)) * 46
-  const xy = pts.map(p => [x(p.time.getTime()), y(p.sea!)] as const)
+  const xy = pts.map(p => [x(p.t), y(p.v)] as const)
   // 부드러운 곡선 (Catmull-Rom → 베지어)
   let path = `M${xy[0][0].toFixed(1)},${xy[0][1].toFixed(1)}`
   for (let i = 0; i < xy.length - 1; i++) {
@@ -150,10 +183,10 @@ function buildChart(d: MarineDash) {
     path += ` C${(p1[0] + (p2[0] - p0[0]) / 6).toFixed(1)},${(p1[1] + (p2[1] - p0[1]) / 6).toFixed(1)} ${(p2[0] - (p3[0] - p1[0]) / 6).toFixed(1)},${(p2[1] - (p3[1] - p1[1]) / 6).toFixed(1)} ${p2[0].toFixed(1)},${p2[1].toFixed(1)}`
   }
   const t = Date.now()
-  const nearest = pts.reduce((a, b) => (Math.abs(b.time.getTime() - t) < Math.abs(a.time.getTime() - t) ? b : a))
-  const today = d.extremes.filter(e => e.time.getTime() >= start.getTime() && e.time.getTime() <= end)
+  const nearest = pts.reduce((a, b) => (Math.abs(b.t - t) < Math.abs(a.t - t) ? b : a))
+  const today = extremes.filter(e => e.time.getTime() >= start.getTime() && e.time.getTime() <= end)
   return {
-    path, nowX: x(t), nowY: y(nearest.sea!),
+    path, nowX: x(t), nowY: y(nearest.v),
     low: today.find(e => e.type === 'low'), high: today.find(e => e.type === 'high'),
   }
 }
