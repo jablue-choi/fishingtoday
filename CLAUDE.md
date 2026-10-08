@@ -15,7 +15,7 @@
 - 지도·역지오코딩: 카카오맵 JS SDK (libraries=services)
 
 ## 구조
-- `supabase/migrations/` 0001~0012. 스키마 변경은 항상 새 번호 파일로 추가하고 `npm run db:push`
+- `supabase/migrations/` 0001~0019. 스키마 변경은 항상 새 번호 파일로 추가하고 `npm run db:push`
 - `supabase/functions/`
   - `award_points` 포인트·스코어 적립 (클라이언트는 point_ledger에 직접 못 씀)
   - `weather` 기상청 초단기실황 프록시 (KMA_SERVICE_KEY)
@@ -33,6 +33,8 @@
 - `supabase/.env` (git 제외, import 스크립트용): SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
 - Supabase 시크릿: KMA_SERVICE_KEY(공공데이터포털, 기상청·해양지수 공용), 선택: KMA_AUTH_KEY, FISHING_INDEX_URL, SEA_TRIP_URL, SHIP_INDEX_URL
 - 기상청·공공데이터 키는 프론트에 두지 않는다. 반드시 엣지 함수 경유
+- Supabase 시크릿 ANTHROPIC_API_KEY: 엣지 함수 identify_fish(사진 어종 확인)용. 선택: FISH_ID_DAILY_LIMIT
+- Open-Meteo(지난 날씨·물때 곡선·시간별 예보·수온·파고)는 키 없이 프론트에서 호출. 무료 API는 비상업 조건 → 상용화 전 기상청·국립해양조사원 API로 교체
 
 ## 규칙
 - 포인트는 원장(point_ledger) 이력 합산. 잔액 컬럼 금지. 금액은 point_rules 테이블. (user_id, reason, ref_id) 유니크로 중복 적립 방지
@@ -44,7 +46,10 @@
 - 금어기·금지체장 해당 시 '방생했어요' 체크 전 저장 불가. 법령 값은 안내용, 화면에 '국가법령정보센터 확인' 문구 유지
 - 외부 카페·커뮤니티 글 크롤링 금지. 데이터는 사용자 기록·공공데이터·정식 제휴로만
 - 엣지 함수는 CORS preflight(OPTIONS) 처리 필수 (빠지면 브라우저에서 'Failed to send a request')
-- UI 문구는 한국어 "~해요"체, 버튼은 동작 그대로. 모바일 우선, 하단 탭
+- UI 문구는 한국어 "~해요"체, 버튼은 동작 그대로. 모바일 우선, 하단 탭(홈·검색·기록·랭킹·내 기록)
+- 디자인: src/styles.css 변수(토큰)만 사용, 컴포넌트에 색 코드 직접 쓰지 말 것. 어종 그림은 components/FishArt.tsx (species.code 기준)
+- 랭킹·스코어용 값(어종·마릿수·크기·시각·위치)은 기록 후 24시간 안에만 수정(0019 트리거). 하루 넘게 지나서 적은 기록·관리자 등록 기록은 포인트·랭킹 제외
+- 관리자 등록 기록은 출처 필수 + '관리자 등록' 표시. 자랑글 링크는 허용 도메인만(is_allowed_share_url), 기록당 1회 50P
 
 ## 명령
 - 개발: `npm run dev` / 빌드 확인: `npm run build`

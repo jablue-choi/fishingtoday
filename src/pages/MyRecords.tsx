@@ -3,11 +3,18 @@ import { supabase } from '../lib/supabase'
 import { fetchMyLogs, buildReport, type LogRow, type Period } from '../lib/records'
 import HistoryMap from '../components/HistoryMap'
 import { reasonLabel } from '../lib/points'
+import FishArt from '../components/FishArt'
+import { fetchSpecies, type Species } from '../lib/species'
+import { Link, useSearchParams } from 'react-router-dom'
 
 type Tab = 'report' | 'map' | 'list'
 
 export default function MyRecords() {
-  const [tab, setTab] = useState<Tab>('report')
+  const [params] = useSearchParams()
+  const [tab, setTab] = useState<Tab>(params.get('tab') === 'list' ? 'list' : 'report')
+  const [species, setSpecies] = useState<Species[]>([])
+  useEffect(() => { fetchSpecies().then(setSpecies).catch(() => setSpecies([])) }, [])
+  const codeOf = (name: string | null) => species.find(s => s.name_ko === name)?.code
   const [period, setPeriod] = useState<Period>('month')
   const [rows, setRows] = useState<LogRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -56,26 +63,34 @@ export default function MyRecords() {
         ))}
       </div>
 
-      {err && <p style={{ color: '#B8531E' }}>{err}</p>}
+      {err && <p style={{ color: 'var(--danger)' }}>{err}</p>}
       {loading ? <p style={{ color: 'var(--mute)' }}>불러오는 중…</p> : rows.length === 0 ? (
         <div className="card" style={{ color: 'var(--mute)' }}>이 기간엔 기록이 없어요. 기록 탭에서 현위치를 찍고 첫 기록을 남겨보세요.</div>
       ) : tab === 'report' ? (
-        <ReportView rep={rep} balance={balance} score={score} ledger={ledger} />
+        <ReportView rep={rep} balance={balance} score={score} ledger={ledger} codeOf={codeOf} />
       ) : tab === 'map' ? (
         <HistoryMap rows={rows} />
       ) : (
-        rows.map(r => (
-          <div key={r.id} className="card">
-            <div style={{ fontWeight: 700 }}>
-              {r.log_type === 'zero' ? '꽝' : `${r.species_name ?? ''} ${r.size_cm ?? ''}cm · ${r.count}마리`}
-              {r.log_type === 'release' && ' (방생)'}
-            </div>
-            <div style={{ color: 'var(--mute)', fontSize: 13 }}>
-              {new Date(r.caught_at).toLocaleString('ko-KR')} · {r.weather ?? ''}{r.temp_c != null ? ` ${r.temp_c}°C` : ''}
-              {r.method_label ? ` · ${r.method_label}` : ''}{r.bait_label ? `/${r.bait_label}` : ''}
-            </div>
-          </div>
-        ))
+        <div className="list">
+          {rows.map(r => (
+            <Link key={r.id} to={`/me/${r.id}`} className="card" style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 0, textDecoration: 'none', color: 'var(--ink)' }}>
+              {r.log_type === 'zero'
+                ? <div className="score-box" style={{ width: 56, height: 34, background: 'var(--line-soft)', color: 'var(--mute)' }}>꽝</div>
+                : <FishArt code={codeOf(r.species_name)} name={r.species_name ?? undefined} size={56} />}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div className="item-title">
+                  {r.log_type === 'zero' ? '꽝' : `${r.species_name ?? ''} ${r.count}마리${r.size_cm ? ` · ${r.size_cm}cm` : ''}`}
+                  {r.log_type === 'release' && ' (방생)'}
+                </div>
+                <div className="sub">
+                  {new Date(r.caught_at).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit' })} · {r.weather ?? ''}{r.temp_c != null ? ` ${r.temp_c}°C` : ''}
+                  {r.method_label ? ` · ${r.method_label}` : ''}{r.bait_label ? `/${r.bait_label}` : ''}
+                </div>
+              </div>
+              {r.log_type !== 'zero' && (r.share_url ? <span className="badge good">자랑글</span> : <span className="badge accent">자랑 +50P</span>)}
+            </Link>
+          ))}
+        </div>
       )}
     </div>
   )
@@ -111,9 +126,35 @@ function Bars({ items, unit = '마리' }: { items: { name: string; fish: number;
   )
 }
 
-function ReportView({ rep, balance, score, ledger }: {
+/** 어종별 리포트: 일러스트 + 막대 */
+function SpeciesBars({ items, codeOf }: { items: { name: string; fish: number; best?: number | null }[]; codeOf: (n: string) => string | undefined }) {
+  const max = Math.max(1, ...items.map(i => i.fish))
+  if (!items.length) return <div className="empty">아직 데이터가 없어요</div>
+  return (
+    <div className="list">
+      {items.map((i, n) => (
+        <div key={i.name} className="item" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <FishArt code={codeOf(i.name)} name={i.name} size={64} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="item-row">
+              <span className="item-title">{n === 0 && <span className="badge accent" style={{ marginRight: 6 }}>최다</span>}{i.name}</span>
+              <b className="num">{i.fish}마리</b>
+            </div>
+            <div style={{ height: 8, background: 'var(--line-soft)', borderRadius: 4, margin: '6px 0 4px' }}>
+              <div style={{ width: `${(i.fish / max) * 100}%`, height: '100%', background: 'linear-gradient(90deg, var(--accent), var(--accent-dark))', borderRadius: 4 }} />
+            </div>
+            {i.best != null && <div className="sub">최대 {i.best}cm</div>}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function ReportView({ rep, balance, score, ledger, codeOf }: {
   rep: ReturnType<typeof buildReport>; balance: number; score: number
   ledger: { created_at: string; reason: string; amount: number }[]
+  codeOf: (name: string | null) => string | undefined
 }) {
   const zeroRate = rep.trips ? Math.round((rep.zeroDays / rep.trips) * 100) : 0
   return (
@@ -125,7 +166,7 @@ function ReportView({ rep, balance, score, ledger }: {
         <Stat label="이달 스코어" value={score} sub={`포인트 ${balance.toLocaleString()}P`} />
       </div>
 
-      <div className="card"><div className="label" style={{ marginTop: 0 }}>어종별</div><Bars items={rep.bySpecies} /></div>
+      <div className="card"><div className="card-title" style={{ marginBottom: 10 }}><span className="dot-mark" />어종별</div><SpeciesBars items={rep.bySpecies} codeOf={codeOf} /></div>
       <div className="card"><div className="label" style={{ marginTop: 0 }}>잘 잡힌 낚시 방법</div><Bars items={rep.byMethod} /></div>
       <div className="card"><div className="label" style={{ marginTop: 0 }}>잘 잡힌 미끼</div><Bars items={rep.byBait} /></div>
       {rep.byMonth.length > 1 && (

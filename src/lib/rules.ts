@@ -40,13 +40,15 @@ export function startsWithin(r: Rule, days: number) {
 export type Check = { level: 'ban' | 'size' | 'info'; title: string; detail: string }
 
 /** 어종·사이즈 입력값으로 경고 만들기 */
-export function checkCatch(rules: Rule[], speciesId: number, sizeCm: number | null): Check[] {
+export function checkCatch(rules: Rule[], speciesId: number, sizeCm: number | null, at?: Date): Check[] {
   const mine = rules.filter(r => r.species_id === speciesId)
+  const d = at ? new Date(at.getTime() + 9 * 3600e3) : kstToday()
+  const past = !!at && Date.now() - at.getTime() > 864e5
   const out: Check[] = []
   for (const r of mine) {
-    if (r.rule_type === 'season' && inPeriod(r))
-      out.push({ level: 'ban', title: `지금은 금어기예요 (${period(r)})`, detail: `이 기간엔 잡으면 안 되는 어종이라 방생해야 해요.${r.note ? ` ${r.note}.` : ''}` })
-    if (r.rule_type === 'notice' && inPeriod(r))
+    if (r.rule_type === 'season' && inPeriod(r, d))
+      out.push({ level: 'ban', title: `${past ? '그날은' : '지금은'} 금어기예요 (${period(r)})`, detail: `이 기간엔 잡으면 안 되는 어종이라 방생해야 해요.${r.note ? ` ${r.note}.` : ''}` })
+    if (r.rule_type === 'notice' && inPeriod(r, d))
       out.push({ level: 'info', title: `금어기 고시 기간이에요 (${period(r)} 중 1개월)`, detail: '올해 고시된 금어기인지 확인해 주세요.' })
     if (r.rule_type === 'min_size' && r.min_size_cm != null && sizeCm != null && sizeCm < r.min_size_cm)
       out.push({ level: 'size', title: `금지체장 ${r.min_size_cm}cm 미만이에요`, detail: `${r.measure ?? '전장'} 기준 ${r.min_size_cm}cm보다 작으면 방생해야 해요.` })
@@ -63,6 +65,7 @@ export async function banZonesAt(lat: number, lon: number): Promise<{ id: number
 }
 
 /** 어종 칩 옆 표시용: 지금 금어기인 어종 id */
-export function closedNow(rules: Rule[]): Set<number> {
-  return new Set(rules.filter(r => r.rule_type === 'season' && inPeriod(r)).map(r => r.species_id))
+export function closedNow(rules: Rule[], at?: Date): Set<number> {
+  const d = at ? new Date(at.getTime() + 9 * 3600e3) : kstToday()
+  return new Set(rules.filter(r => r.rule_type === 'season' && inPeriod(r, d)).map(r => r.species_id))
 }

@@ -29,7 +29,7 @@ export default function NicknameSetup({ onDone }: { onDone: (nick: string) => vo
         placeholder="예: 서해우럭왕"
         style={{ padding: '12px 14px', borderRadius: 12, border: '1.5px solid var(--line)', fontSize: 16, marginBottom: 6 }}
       />
-      <div style={{ fontSize: 12, color: err ? '#B8531E' : 'var(--mute)', marginBottom: 14 }}>
+      <div style={{ fontSize: 12, color: err ? 'var(--danger)' : 'var(--mute)', marginBottom: 14 }}>
         {err || '2~12자, 한글·영문·숫자·_ 만 쓸 수 있어요.'}
       </div>
       <button className="btn" disabled={!valid || saving} onClick={submit}>

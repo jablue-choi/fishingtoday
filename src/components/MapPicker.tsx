@@ -8,10 +8,12 @@ type Pos = { lat: number; lon: number }
  * - 핀을 드래그하거나 지도를 탭하면 위치가 바뀜
  * - "내 위치로" 버튼으로 GPS 위치 복귀
  */
-export default function MapPicker({ initial, gps, onChange }: {
+export default function MapPicker({ initial, gps, onChange, level = 3, backLabel = '내 위치로' }: {
   initial: Pos
   gps: Pos
   onChange: (p: Pos) => void
+  level?: number        // 카카오맵 확대 단계 (클수록 넓게)
+  backLabel?: string
 }) {
   const box = useRef<HTMLDivElement>(null)
   const mapRef = useRef<any>(null)
@@ -24,7 +26,7 @@ export default function MapPicker({ initial, gps, onChange }: {
     loadKakaoMap().then(kakao => {
       if (!alive || !box.current) return
       const center = new kakao.maps.LatLng(initial.lat, initial.lon)
-      const map = new kakao.maps.Map(box.current, { center, level: 3 })
+      const map = new kakao.maps.Map(box.current, { center, level })
       map.addControl(new kakao.maps.ZoomControl(), kakao.maps.ControlPosition.RIGHT)
       const marker = new kakao.maps.Marker({ position: center, draggable: true })
       marker.setMap(map)
@@ -56,7 +58,7 @@ export default function MapPicker({ initial, gps, onChange }: {
     onChange(gps)
   }
 
-  if (err) return <div className="card" style={{ color: '#B8531E', fontSize: 13 }}>{err}</div>
+  if (err) return <div className="card" style={{ color: 'var(--danger)', fontSize: 13 }}>{err}</div>
 
   return (
     <div style={{ position: 'relative', marginBottom: 10 }}>
@@ -66,8 +68,8 @@ export default function MapPicker({ initial, gps, onChange }: {
       </div>
       {moved && (
         <button className="chip" onClick={backToGps}
-          style={{ position: 'absolute', left: 8, top: 8, zIndex: 2, background: '#fff' }}>
-          내 위치로
+          style={{ position: 'absolute', left: 8, top: 8, zIndex: 2, background: '#fff', color: '#17181A' }}>
+          {backLabel}
         </button>
       )}
     </div>

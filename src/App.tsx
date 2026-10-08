@@ -7,6 +7,11 @@ import LogCatch from './pages/LogCatch'
 import MyRecords from './pages/MyRecords'
 import Search from './pages/Search'
 import NicknameSetup from './pages/NicknameSetup'
+import Icon from './components/Icon'
+import Settings from './pages/Settings'
+import Admin from './pages/Admin'
+import Ranking from './pages/Ranking'
+import RecordEdit from './pages/RecordEdit'
 import { fetchMyProfile } from './lib/profile'
 
 export default function App() {
@@ -39,12 +44,17 @@ export default function App() {
         <Route path="/log" element={<LogCatch />} />
         <Route path="/search" element={<Search />} />
         <Route path="/me" element={<MyRecords />} />
+        <Route path="/me/:id" element={<RecordEdit />} />
+        <Route path="/settings" element={<Settings />} />
+        <Route path="/ranking" element={<Ranking />} />
+        <Route path="/admin" element={<Admin />} />
       </Routes>
       <nav className="tabs">
-        <NavLink to="/" end className={({ isActive }) => (isActive ? 'on' : '')}>홈</NavLink>
-        <NavLink to="/search" className={({ isActive }) => (isActive ? 'on' : '')}>검색</NavLink>
-        <NavLink to="/log" className={({ isActive }) => (isActive ? 'on' : '')}>기록</NavLink>
-        <NavLink to="/me" className={({ isActive }) => (isActive ? 'on' : '')}>내 기록</NavLink>
+        <NavLink to="/" end className={({ isActive }) => (isActive ? 'on' : '')}><Icon name="home" size={20} />홈</NavLink>
+        <NavLink to="/search" className={({ isActive }) => (isActive ? 'on' : '')}><Icon name="search" size={20} />검색</NavLink>
+        <NavLink to="/log" className="rec" aria-label="조과 기록하기"><span className="rec-btn"><Icon name="camera" size={22} /></span>기록하기</NavLink>
+        <NavLink to="/ranking" className={({ isActive }) => (isActive ? 'on' : '')}><Icon name="trophy" size={20} />랭킹</NavLink>
+        <NavLink to="/me" className={({ isActive }) => (isActive ? 'on' : '')}><Icon name="user" size={20} />내 기록</NavLink>
       </nav>
     </>
   )
@@ -53,6 +63,7 @@ export default function App() {
 function Landing() {
   return (
     <div className="page" style={{ display: 'flex', flexDirection: 'column', minHeight: '100dvh', justifyContent: 'flex-end' }}>
+      <img src="/icon-192.png" alt="" width={88} height={88} style={{ marginBottom: 16 }} />
       <h1 style={{ fontSize: 30 }}>오늘낚시</h1>
       <p style={{ color: 'var(--mute)', marginTop: 0 }}>현위치 찍으면 물때·날씨가 자동으로,<br />기록하면 포인트가 쌓여요</p>
       <button className="btn kakao" onClick={() => signInWithKakao()}>카카오로 3초 만에 시작</button>

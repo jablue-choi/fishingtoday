@@ -1,129 +1,204 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { searchPublic, summarizePlaces, getRecent, pushRecent, clearRecent, type Mode, type PubRow } from '../lib/search'
+import { searchUnified, searchRecent, summarizePlaces, getRecent, pushRecent, clearRecent, distKm, type PubRow, type SearchResult } from '../lib/search'
+import { getLastPos } from '../lib/fishingIndex'
+import { siteName } from '../lib/brag'
+import { searchPlaces } from '../lib/kakaoMap'
+import { fetchSpecies, type Species } from '../lib/species'
 import HistoryMap from '../components/HistoryMap'
 import FishingIndexCard from '../components/FishingIndexCard'
 import SeasonCard from '../components/SeasonCard'
+import FishArt from '../components/FishArt'
+import Icon from '../components/Icon'
 import type { LogRow } from '../lib/records'
 
-const MODES: { k: Mode; label: string; ph: string }[] = [
-  { k: 'region', label: '지역', ph: '예: 대부도, 태안, 여수' },
-  { k: 'species', label: '어종', ph: '예: 우럭, 주꾸미, 감성돔' },
-  { k: 'recommend', label: '추천', ph: '최근 2주 조황 좋은 곳' },
-]
-const SPECIES_HINT = ['우럭', '주꾸미', '갑오징어', '감성돔', '광어', '망둥어', '고등어', '무늬오징어']
+type Tab = 'search' | 'recommend'
+const SPECIES_HINT = ['우럭', '주꾸미', '갑오징어', '감성돔', '광어', '고등어']
+const REGION_HINT = ['대부도', '태안', '속초', '여수', '제주']
 
+/** 검색: 한 칸에 지역·어종을 섞어 입력 ('속초 우럭'). 추천은 최근 2주 조황 */
 export default function Search() {
   const [params] = useSearchParams()
-  const [mode, setMode] = useState<Mode>((params.get('mode') as Mode) || 'region')
+  const [tab, setTab] = useState<Tab>(params.get('mode') === 'recommend' ? 'recommend' : 'search')
   const [q, setQ] = useState(params.get('q') ?? '')
+  const [species, setSpecies] = useState<Species[]>([])
+  const [res, setRes] = useState<SearchResult | null>(null)
   const [rows, setRows] = useState<PubRow[] | null>(null)
   const [loading, setLoading] = useState(false)
   const [err, setErr] = useState('')
-  const [recent, setRecent] = useState(getRecent())
+  const [recent, setRecent] = useState(getRecent)
   const [view, setView] = useState<'list' | 'map'>('list')
+  const [me] = useState(getLastPos)
+  const [sort, setSort] = useState<'score' | 'near'>('score')
 
-  async function run(m: Mode = mode, kw: string = q) {
-    setLoading(true); setErr('')
+  const names = useMemo(() => species.map(s => s.name_ko), [species])
+  const speciesReady = useMemo(() => fetchSpecies().then(l => { setSpecies(l); return l.map(s => s.name_ko) }).catch(() => [] as string[]), [])
+
+  async function run(kw: string = q) {
+    const v = kw.trim()
+    if (!v) return
+    setLoading(true); setErr(''); setQ(v)
     try {
-      setRows(await searchPublic(m, kw))
-      if (m !== 'recommend') { pushRecent(m, kw); setRecent(getRecent()) }
+      const r = await searchUnified(v, names.length ? names : await speciesReady, async p => (await searchPlaces(p))[0] ?? null)
+      setRes(r); setRows(r.rows)
+      pushRecent(v); setRecent(getRecent())
     } catch (e) { setErr((e as Error).message) }
     finally { setLoading(false) }
   }
 
-  // 주소(?mode=&q=)로 들어오면 바로 검색. 검색 화면 안에서 추천 카드를 눌러도 다시 실행
-  useEffect(() => {
-    const m = (params.get('mode') as Mode) || mode
-    const kw = params.get('q')
-    if (!kw) return
-    setMode(m); setQ(kw); run(m, kw)
-  }, [params]) // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { if (mode === 'recommend') run('recommend', '') }, [mode]) // eslint-disable-line react-hooks/exhaustive-deps
+  async function runRecommend() {
+    setLoading(true); setErr(''); setRes(null)
+    try { setRows(await searchRecent()) } catch (e) { setErr((e as Error).message) }
+    finally { setLoading(false) }
+  }
 
-  const places = useMemo(() => summarizePlaces(rows ?? []), [rows])
+  // 주소(?q=)로 들어오면 바로 검색 (홈 제철 카드 등). ?mode=recommend면 추천 탭
+  useEffect(() => {
+    if (params.get('mode') === 'recommend') { setTab('recommend'); return }
+    const kw = params.get('q')
+    if (kw) { setTab('search'); run(kw) }
+  }, [params]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (tab === 'recommend') runRecommend(); else { setRows(res?.rows ?? null) } }, [tab]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const places = useMemo(() => {
+    const list = summarizePlaces(rows ?? []).map(p => ({ ...p, dist: me ? distKm(me, p) : null }))
+    return sort === 'near' && me ? [...list].sort((a, b) => a.dist! - b.dist!) : list
+  }, [rows, me, sort])
   const asLogRows = useMemo(() => (rows ?? []).map(r => ({ ...r, lat: Number(r.lat), lon: Number(r.lon) })) as unknown as LogRow[], [rows])
   const hasSample = rows?.some(r => r.is_sample)
+  const codeOf = (n: string) => species.find(s => s.name_ko === n)?.code
 
   return (
     <div className="page">
       <h1>검색</h1>
-      <div className="chips" style={{ marginBottom: 10 }}>
-        {MODES.map(m => (
-          <button key={m.k} className={`chip ${mode === m.k ? 'on' : ''}`} onClick={() => { setMode(m.k); setRows(null) }}>{m.label}</button>
-        ))}
+      <div className="chips" style={{ marginBottom: 12 }}>
+        <button className={`chip ${tab === 'search' ? 'on' : ''}`} onClick={() => setTab('search')}>검색</button>
+        <button className={`chip ${tab === 'recommend' ? 'on' : ''}`} onClick={() => setTab('recommend')}>추천</button>
       </div>
 
-      {mode !== 'recommend' && (
-        <div className="row" style={{ marginBottom: 10 }}>
-          <input
-            autoFocus value={q} onChange={e => setQ(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && run()}
-            placeholder={MODES.find(m => m.k === mode)!.ph}
-            style={{ flex: 3, padding: '12px 14px', borderRadius: 12, border: '1.5px solid var(--line)', fontSize: 15 }}
-          />
-          <button className="btn" style={{ flex: 1 }} onClick={() => run()}>검색</button>
-        </div>
+      {tab === 'search' && (
+        <>
+          <form className="search-field" role="search" onSubmit={e => { e.preventDefault(); run() }} style={{ marginBottom: 12 }}>
+            <Icon name="search" size={20} />
+            <input type="search" autoFocus value={q} onChange={e => setQ(e.target.value)} placeholder="지역·어종 (예: 속초 우럭, 주꾸미)" aria-label="지역·어종 검색" enterKeyHint="search" />
+            <button type="submit" disabled={!q.trim()}>검색</button>
+          </form>
+
+          {/* 검색어를 어떻게 알아들었는지 */}
+          {res && !loading && (
+            <div className="chips" style={{ marginBottom: 10 }}>
+              {res.parsed.region && <span className="badge ink">지역 · {res.near ? `${res.near.name} 근처 ${res.near.km}km` : res.parsed.region}</span>}
+              {res.parsed.species.map(s => <span key={s} className="badge accent">어종 · {s}</span>)}
+            </div>
+          )}
+
+          {!rows && !loading && (
+            <>
+              {recent.length > 0 && (
+                <div className="card">
+                  <div className="card-head">
+                    <div className="card-title" style={{ fontSize: 15 }}>최근 검색</div>
+                    <button className="chip sm" onClick={() => { clearRecent(); setRecent([]) }}>지우기</button>
+                  </div>
+                  <div className="chips">
+                    {recent.map(r => <button key={r} className="chip sm" onClick={() => run(r)}>{r}</button>)}
+                  </div>
+                </div>
+              )}
+              <div className="card">
+                <div className="card-head"><div className="card-title" style={{ fontSize: 15 }}>이렇게 찾아보세요</div></div>
+                <div className="label" style={{ marginTop: 0 }}>어종</div>
+                <div className="chips">
+                  {SPECIES_HINT.map(s => (
+                    <button key={s} className="chip sm" onClick={() => run(s)} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                      <FishArt code={codeOf(s)} size={24} />{s}
+                    </button>
+                  ))}
+                </div>
+                <div className="label">지역</div>
+                <div className="chips">{REGION_HINT.map(s => <button key={s} className="chip sm" onClick={() => run(s)}>{s}</button>)}</div>
+                <div className="note">지역과 어종을 같이 적어도 돼요. 예: 태안 주꾸미</div>
+              </div>
+            </>
+          )}
+        </>
       )}
 
-      {mode === 'species' && !rows && (
-        <div className="chips" style={{ marginBottom: 12 }}>
-          {SPECIES_HINT.map(s => <button key={s} className="chip" onClick={() => { setQ(s); run('species', s) }}>{s}</button>)}
-        </div>
+      {tab === 'recommend' && (
+        <>
+          <SeasonCard />
+          <FishingIndexCard title="오늘 지수 좋은 바다 포인트" nationwide limit={5} />
+          <div className="card-head" style={{ marginTop: 8 }}><div className="card-title">오늘낚시 사용자 최근 2주 조황</div></div>
+        </>
       )}
 
-      {!rows && mode !== 'recommend' && recent.length > 0 && (
-        <div className="card">
-          <div className="row" style={{ alignItems: 'center' }}>
-            <div className="label" style={{ margin: 0 }}>최근 검색</div>
-            <button className="chip" style={{ flex: 0, fontSize: 11 }} onClick={() => { clearRecent(); setRecent([]) }}>지우기</button>
-          </div>
-          <div className="chips" style={{ marginTop: 8 }}>
-            {recent.map((r, i) => (
-              <button key={i} className="chip" onClick={() => { setMode(r.mode); setQ(r.q); run(r.mode, r.q) }}>
-                {r.mode === 'species' ? '🐟 ' : '📍 '}{r.q}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {mode === 'recommend' && <SeasonCard />}
-      {mode === 'recommend' && <FishingIndexCard title="오늘 지수 좋은 바다 포인트" nationwide limit={5} />}
-      {mode === 'recommend' && <div className="label">오늘낚시 사용자 최근 2주 조황</div>}
-
-      {err && <p style={{ color: '#B8531E' }}>{err}</p>}
-      {loading && <p style={{ color: 'var(--mute)' }}>찾는 중…</p>}
+      {err && <div className="error">{err}</div>}
+      {loading && <div className="empty">찾는 중…</div>}
 
       {rows && !loading && (
         rows.length === 0 ? (
-          <div className="card" style={{ color: 'var(--mute)' }}>공개된 기록이 아직 없어요. 다른 지역이나 어종으로 찾아보세요.</div>
+          <div className="card plain empty">
+            {tab === 'search' && res && !res.parsed.region && !res.parsed.species.length
+              ? '검색어를 알아듣지 못했어요. 지역이나 어종 이름으로 찾아보세요.'
+              : '공개된 기록이 아직 없어요. 다른 지역이나 어종으로 찾아보세요.'}
+          </div>
         ) : (
           <>
-            <div className="row" style={{ alignItems: 'center', marginBottom: 8 }}>
-              <div style={{ fontSize: 13, color: 'var(--mute)' }}>
-                {mode === 'recommend' ? '최근 2주 공개 조황 기준' : `기록 ${rows.length}건`} · 지역 {places.length}곳
-              </div>
-              <div className="chips" style={{ flex: 0, flexWrap: 'nowrap' }}>
-                <button className={`chip ${view === 'list' ? 'on' : ''}`} onClick={() => setView('list')}>목록</button>
-                <button className={`chip ${view === 'map' ? 'on' : ''}`} onClick={() => setView('map')}>지도</button>
+            <div className="item-row" style={{ marginBottom: 8 }}>
+              <div className="sub">{tab === 'recommend' ? '최근 2주 공개 조황' : `기록 ${rows.length}건`} · 지역 {places.length}곳</div>
+              <div className="chips" style={{ flexWrap: 'nowrap' }}>
+                <button className={`chip sm ${view === 'list' ? 'on' : ''}`} onClick={() => setView('list')}>목록</button>
+                <button className={`chip sm ${view === 'map' ? 'on' : ''}`} onClick={() => setView('map')}>지도</button>
               </div>
             </div>
-            {hasSample && <div style={{ fontSize: 11, color: 'var(--mute)', marginBottom: 8 }}>개발용 샘플 데이터가 포함돼 있어요.</div>}
+            {hasSample && <div className="note" style={{ marginTop: 0, marginBottom: 8 }}>개발용 샘플 데이터가 포함돼 있어요.</div>}
+
+            {view === 'list' && (
+              me ? (
+                <div className="chips" style={{ marginBottom: 10 }}>
+                  <button className={`chip sm ${sort === 'score' ? 'on' : ''}`} onClick={() => setSort('score')}>조황 좋은 순</button>
+                  <button className={`chip sm ${sort === 'near' ? 'on' : ''}`} onClick={() => setSort('near')}>가까운 순</button>
+                </div>
+              ) : (
+                <div className="note" style={{ marginTop: 0, marginBottom: 10 }}>기록 화면에서 현위치를 한 번 찍으면 내 위치와의 거리도 보여 드려요.</div>
+              )
+            )}
 
             {view === 'map' ? <HistoryMap rows={asLogRows} /> : places.slice(0, 20).map((p, i) => (
               <div key={p.key} className="card">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                  <b>{mode === 'recommend' && i < 3 ? `${i + 1}. ` : ''}{p.region}</b>
-                  <span style={{ fontSize: 12, color: 'var(--mute)' }}>{new Date(p.last).toLocaleDateString('ko-KR')}</span>
+                <div className="item-row" style={{ alignItems: 'baseline' }}>
+                  <b>{tab === 'recommend' && sort === 'score' && i < 3 ? `${i + 1}. ` : ''}{p.region}</b>
+                  {p.dist != null
+                    ? <span className="badge ink">내 위치에서 {p.dist < 10 ? p.dist.toFixed(1) : Math.round(p.dist)}km</span>
+                    : <span className="sub">{new Date(p.last).toLocaleDateString('ko-KR')}</span>}
                 </div>
-                <div style={{ fontSize: 13, marginTop: 4 }}>
-                  {p.species.length ? p.species.map(([n, c]) => `${n} ${c}마리`).join(' · ') : '조과 없음'}
+                {p.dist != null && <div className="sub">최근 기록 {new Date(p.last).toLocaleDateString('ko-KR')}</div>}
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
+                  {p.species.length ? p.species.map(([n, c]) => (
+                    <span key={n} className="item" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px 4px 6px', fontSize: 13, fontWeight: 700 }}>
+                      <FishArt code={codeOf(n)} size={28} />{n} {c}마리
+                    </span>
+                  )) : <span className="sub">조과 없음</span>}
                 </div>
-                <div style={{ fontSize: 12, color: 'var(--mute)', marginTop: 2 }}>
+                <div className="sub" style={{ marginTop: 6 }}>
                   기록 {p.logs}건{p.zero ? ` (꽝 ${p.zero})` : ''}
                   {p.method ? ` · 많이 잡힌 방법 ${p.method}` : ''}{p.bait ? `/${p.bait}` : ''}
                 </div>
+                {p.brags.length > 0 && (
+                  <div className="chips" style={{ marginTop: 8 }}>
+                    {p.brags.map(b => (
+                      <a key={b.url} className="chip sm" href={b.url} target="_blank" rel="noopener noreferrer nofollow ugc" style={{ textDecoration: 'none' }}>
+                        {b.nickname}님의 {siteName(b.url)}
+                      </a>
+                    ))}
+                  </div>
+                )}
+                {p.admin > 0 && (
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', marginTop: 6 }}>
+                    <span className="badge ink">관리자 등록 {p.admin === p.logs ? '' : `${p.admin}건`}</span>
+                    <span className="sub">출처: {p.sources.slice(0, 2).join(', ')}{p.sources.length > 2 ? ` 외 ${p.sources.length - 2}곳` : ''}</span>
+                  </div>
+                )}
               </div>
             ))}
           </>

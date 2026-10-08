@@ -18,9 +18,9 @@ export async function fetchFishingIndex(gubun: Gubun, near?: { lat: number; lon:
   return data
 }
 
-export const SCORE_COLOR: Record<string, string> = {
-  '매우좋음': '#0A55B5', '좋음': '#3FA9F5', '보통': '#8A8D86', '나쁨': '#E8A13A', '매우나쁨': '#D9472B',
-}
+export const SCORE_RANK: Record<string, number> = { '매우좋음': 5, '좋음': 4, '보통': 3, '나쁨': 2, '매우나쁨': 1 }
+/** 지수 배지 클래스 (색은 styles.css의 --score-1~5) */
+export const scoreClass = (score: string) => `score score-${SCORE_RANK[score] ?? 3}`
 
 /* 마지막으로 찍은 위치 (홈에서 위치 권한을 다시 묻지 않으려고) */
 const LAST = 'last_pos'

@@ -57,7 +57,7 @@ export default function HistoryMap({ rows }: { rows: LogRow[] }) {
     return () => { alive = false; overlays.forEach(o => o.setMap(null)) }
   }, [rows])
 
-  if (err) return <div className="card" style={{ color: '#B8531E', fontSize: 13 }}>{err}</div>
+  if (err) return <div className="card" style={{ color: 'var(--danger)', fontSize: 13 }}>{err}</div>
 
   return (
     <div>

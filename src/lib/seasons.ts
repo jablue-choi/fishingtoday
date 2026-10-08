@@ -7,11 +7,11 @@ export const AREAS: Area[] = ['서해', '남해', '동해', '제주', '민물']
 type SeasonRow = {
   species_id: number; area: Area; months: number[]; peak_months: number[]
   methods: string[]; baits: string[]; tip: string | null
-  species: { name_ko: string } | null
+  species: { name_ko: string; code: string } | null
 }
 
 export type SeasonPick = {
-  speciesId: number; name: string; peak: boolean; methods: string[]; baits: string[]; tip: string | null
+  speciesId: number; name: string; code: string | null; peak: boolean; methods: string[]; baits: string[]; tip: string | null
   recent: number            // 최근 30일 공개 기록 마릿수
   closingIn: number | null  // n일 뒤 금어기 시작
 }
@@ -31,7 +31,7 @@ let seasonCache: Promise<SeasonRow[]> | null = null
 function fetchSeasons(): Promise<SeasonRow[]> {
   if (!seasonCache) {
     seasonCache = Promise.resolve(supabase.from('species_seasons')
-      .select('species_id,area,months,peak_months,methods,baits,tip,species(name_ko)'))
+      .select('species_id,area,months,peak_months,methods,baits,tip,species(name_ko,code)'))
       .then(({ data, error }) => { if (error) { seasonCache = null; throw error } return (data ?? []) as unknown as SeasonRow[] })
   }
   return seasonCache
@@ -61,7 +61,7 @@ export async function seasonPicks(area: Area): Promise<SeasonPick[]> {
       const soon = seasonRules.filter(x => x.species_id === r.species_id).map(x => startsWithin(x, 30)).filter((d): d is number => d !== false)
       const name = r.species?.name_ko ?? ''
       return {
-        speciesId: r.species_id, name, peak: r.peak_months.includes(month),
+        speciesId: r.species_id, name, code: r.species?.code ?? null, peak: r.peak_months.includes(month),
         methods: r.methods, baits: r.baits, tip: r.tip,
         recent: counts.get(name) ?? 0,
         closingIn: soon.length ? Math.min(...soon) : null,

@@ -13,6 +13,7 @@ export type LogRow = {
   temp_c: number | null
   lat: number
   lon: number
+  share_url?: string | null
 }
 
 export type Period = 'month' | 'year' | 'all'
@@ -21,8 +22,9 @@ export async function fetchMyLogs(period: Period): Promise<LogRow[]> {
   const { data: { user } } = await supabase.auth.getUser()
   let q = supabase
     .from('catch_logs_v')
-    .select('id,caught_at,log_type,species_name,size_cm,count,method_label,bait_label,weather,temp_c,lat,lon')
+    .select('id,caught_at,log_type,species_name,size_cm,count,method_label,bait_label,weather,temp_c,lat,lon,share_url')
     .eq('user_id', user!.id)
+    .eq('entered_by', 'user')   // 관리자 등록 기록은 내 리포트에서 제외
     .order('caught_at', { ascending: false })
   const now = new Date()
   if (period === 'month') q = q.gte('caught_at', new Date(now.getFullYear(), now.getMonth(), 1).toISOString())

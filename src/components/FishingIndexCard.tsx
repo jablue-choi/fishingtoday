@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react'
-import { fetchFishingIndex, getLastPos, SCORE_COLOR, type FishingIndex, type Gubun } from '../lib/fishingIndex'
+import { fetchFishingIndex, getLastPos, scoreClass, SCORE_RANK, type FishingIndex, type Gubun } from '../lib/fishingIndex'
 
-const RANK: Record<string, number> = { '매우좋음': 5, '좋음': 4, '보통': 3, '나쁨': 2, '매우나쁨': 1 }
-const best = (list: FishingIndex[]) => Math.max(0, ...list.map(i => RANK[i.score] ?? 0))
+const best = (list: FishingIndex[]) => Math.max(0, ...list.map(i => SCORE_RANK[i.score] ?? 0))
 const TITLE: Record<string, string> = { '갯바위': '오늘 바다낚시지수', '선상': '오늘 바다낚시지수', '바다여행': '오늘 바다여행지수' }
 
 /** 홈: 내 주변(마지막 위치) 바다낚시지수. 위치가 없으면 전국 상위. */
@@ -52,56 +51,56 @@ export default function FishingIndexCard({ title, nationwide = false, limit = 4 
   const groups = new Map<string, FishingIndex[]>()
   for (const i of items ?? []) { const k = `${i.name}|${i.date}`; groups.set(k, [...(groups.get(k) ?? []), i]) }
 
+  const today = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10)
+
   return (
     <div className="card">
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap', marginBottom: 6 }}>
-        <b style={{ fontSize: 15 }}>{title ?? TITLE[gubun]}</b>
+      <div className="card-head">
+        <div className="card-title"><span className="dot-mark" />{title ?? TITLE[gubun]}</div>
         <div className="chips" style={{ flexWrap: 'nowrap' }}>
           {(['갯바위', '선상', '바다여행'] as Gubun[]).map(g => (
-            <button key={g} className={`chip ${gubun === g ? 'on' : ''}`} style={{ fontSize: 12, padding: '4px 10px', whiteSpace: 'nowrap' }} onClick={() => setGubun(g)}>{g === '바다여행' ? '여행' : g}</button>
+            <button key={g} className={`chip sm ${gubun === g ? 'on' : ''}`} onClick={() => setGubun(g)}>{g === '바다여행' ? '여행' : g}</button>
           ))}
         </div>
-      </div>
-      <div style={{ fontSize: 11, color: 'var(--mute)', marginBottom: 6 }}>
-        {near && !nationwide ? '마지막으로 기록한 위치 기준 가까운 곳' : '전국 지수 높은 순'} · 국립해양조사원{gubun === '바다여행' ? ' 바다여행지수 (가족 나들이용)' : ''}
       </div>
       {gubun === '선상' && ship && ship.length > 0 && (
-        <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', fontSize: 12, padding: '6px 8px', background: 'var(--paper)', borderRadius: 8, marginBottom: 6 }}>
-          <span>⛴ 선박운항 · {ship[0].name}{ship[0].dist_km != null ? ` (${ship[0].dist_km.toFixed(0)}km)` : ''}</span>
-          {ship.map((i, idx) => (
-            <span key={`${i.time}-${idx}`} style={{ padding: '1px 7px', borderRadius: 999, color: '#fff', background: SCORE_COLOR[i.score] ?? '#8A8D86' }}>{i.time} {i.score}</span>
-          ))}
+        <div className="item" style={{ marginBottom: 8 }}>
+          <div className="sub" style={{ marginBottom: 4 }}>선박운항 · {ship[0].name}{ship[0].dist_km != null ? ` (${ship[0].dist_km.toFixed(0)}km)` : ''}</div>
+          <div className="chips">
+            {ship.map((i, idx) => <span key={`${i.time}-${idx}`} className={scoreClass(i.score)}>{i.time} {i.score}</span>)}
+          </div>
         </div>
       )}
-      {err && <div style={{ fontSize: 13, color: '#B8531E' }}>{err}</div>}
-      {!items && !err && <div style={{ fontSize: 13, color: 'var(--mute)' }}>불러오는 중…</div>}
-      {[...groups.values()].map(g => {
-        // 같은 포인트·날짜 안에서 어종별로 오전/오후 묶기
-        const byFish = new Map<string, FishingIndex[]>()
-        for (const i of g) { const f = i.fish ?? (gubun === '바다여행' ? '바다여행' : '전체'); byFish.set(f, [...(byFish.get(f) ?? []), i]) }
-        const head = g[0]
-        return (
-          <div key={head.name + head.date} style={{ padding: '8px 0', borderTop: '1px solid var(--box)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
-              <b>{head.name}</b>
-              <span style={{ fontSize: 12, color: 'var(--mute)' }}>{head.date === new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10) ? '오늘' : head.date.slice(5).replace('-', '/')}{head.dist_km != null ? ` · ${head.dist_km.toFixed(0)}km` : ''}</span>
-            </div>
-            {[...byFish.entries()].map(([fish, list]) => (
-              <div key={fish} style={{ display: 'flex', gap: 6, marginTop: 4, alignItems: 'center', flexWrap: 'wrap' }}>
-                {fish !== '바다여행' && <span style={{ fontSize: 12, minWidth: 52 }}>{fish}</span>}
-                {list.map((i, idx) => (
-                  <span key={`${i.time}-${idx}`} style={{ fontSize: 12, padding: '2px 8px', borderRadius: 999, color: '#fff', background: SCORE_COLOR[i.score] ?? '#8A8D86' }}>
-                    {i.time} {i.score}
-                  </span>
-                ))}
+      {err && <div className="error">{err}</div>}
+      {!items && !err && <div className="empty">불러오는 중…</div>}
+      <div className="list">
+        {[...groups.values()].map(g => {
+          // 같은 포인트·날짜 안에서 어종별로 오전/오후 묶기
+          const byFish = new Map<string, FishingIndex[]>()
+          for (const i of g) { const f = i.fish ?? (gubun === '바다여행' ? '바다여행' : '전체'); byFish.set(f, [...(byFish.get(f) ?? []), i]) }
+          const head = g[0]
+          const top = [...g].sort((a, b) => (SCORE_RANK[b.score] ?? 0) - (SCORE_RANK[a.score] ?? 0))[0]
+          const rank = SCORE_RANK[top.score] ?? 3
+          const fishes = [...byFish.keys()].filter(f => f !== '바다여행' && f !== '전체')
+          const times = [...new Set(g.map(i => `${i.time} ${i.score}`))].slice(0, 3)
+          return (
+            <div key={head.name + head.date} className="item" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div className={`score-box num s${rank}`} title="지수 점수">{top.points != null ? Math.round(top.points) : rank}</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div className="item-title">{head.name} <span className="sub" style={{ fontWeight: 500 }}>· {head.date === today ? '오늘' : head.date.slice(5).replace('-', '/')}{head.dist_km != null ? ` · ${head.dist_km.toFixed(1)}km` : ''}</span></div>
+                <div className="sub">{fishes.length ? `대상어: ${fishes.join(', ')}` : times.join(' · ')}</div>
+                <div className="sub" style={{ fontSize: 11 }}>
+                  {[fishes.length ? times.join(' · ') : '', head.water_temp && `수온 ${head.water_temp}°C`, head.wave && `파고 ${head.wave}m`].filter(Boolean).join(' · ')}
+                </div>
               </div>
-            ))}
-            <div style={{ fontSize: 11, color: 'var(--mute)', marginTop: 4 }}>
-              {[head.weather && head.weather, head.tide && `물때 ${head.tide}`, head.water_temp && `수온 ${head.water_temp}°C`, head.wave && `파고 ${head.wave}m`, head.wind && `풍속 ${head.wind}m/s`].filter(Boolean).join(' · ')}
+              <span className={scoreClass(top.score)}>{top.score}</span>
             </div>
-          </div>
-        )
-      })}
+          )
+        })}
+      </div>
+      <div className="note">
+        {near && !nationwide ? '마지막으로 기록한 위치 기준 가까운 곳' : '전국 지수 높은 순'} · 국립해양조사원{gubun === '바다여행' ? ' 바다여행지수 (가족 나들이용)' : ''}
+      </div>
     </div>
   )
 }

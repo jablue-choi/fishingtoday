@@ -1,5 +1,6 @@
 // supabase/functions/award_points/index.ts
-// 호출: POST { catch_log_id }  (Authorization: Bearer <user jwt>)
+// 호출: POST { catch_log_id, action? }  (Authorization: Bearer <user jwt>)
+//   action 없음: 기록 저장 직후 적립 / action 'brag': 자랑글 링크를 붙였을 때 적립(기록당 1회)
 // 역할: 기록 하나에 대해 적립 가능한 포인트를 계산해서 point_ledger에 쓰고,
 //       스코어를 score_events에 기록한다. 클라이언트는 원장에 직접 못 쓴다(RLS).
 
@@ -21,7 +22,7 @@ Deno.serve(async (req) => {
   if (req.method !== 'POST') return json({ error: 'POST only' }, 405)
 
   const authHeader = req.headers.get('Authorization') ?? ''
-  const { catch_log_id } = await req.json().catch(() => ({}))
+  const { catch_log_id, action } = await req.json().catch(() => ({}))
   if (!catch_log_id) return json({ error: 'catch_log_id required' }, 400)
 
   // 1) 호출자 확인 — anon 키 + 유저 JWT로 auth.getUser
@@ -41,19 +42,40 @@ Deno.serve(async (req) => {
 
   const { data: log, error: lErr } = await db
     .from('catch_logs')
-    .select('id,user_id,spot_id,log_type,species_id,size_cm,count,method_code,bait_code,caught_at,verified')
+    .select('id,user_id,spot_id,log_type,species_id,size_cm,count,method_code,bait_code,caught_at,created_at,verified,entered_by,share_url')
     .eq('id', catch_log_id)
     .single()
   if (lErr || !log) return json({ error: 'log not found' }, 404)
   if (log.user_id !== user.id) return json({ error: 'not your log' }, 403)
+
+  // 관리자 등록 기록, 하루 넘게 지난 조과를 나중에 적은 기록은 포인트·스코어 없음 (몰아서 적립 방지)
+  const late = new Date(log.created_at).getTime() - new Date(log.caught_at).getTime() > 24 * 3600 * 1000
+  if (log.entered_by === 'admin' || late) {
+    const { data: bal } = await db.from('point_balances').select('balance').eq('user_id', user.id).maybeSingle()
+    return json({ awarded: [], total: 0, balance: bal?.balance ?? 0, capped: false, late })
+  }
 
   const { data: rulesRows } = await db.from('point_rules').select('reason,amount')
   const rules = Object.fromEntries((rulesRows ?? []).map((r: Rule) => [r.reason, r.amount]))
 
   // 3) 적립 후보 계산
   const candidates: Awarded[] = []
+  let bragSkipped: string | null = null
 
-  if (log.log_type === 'zero') {
+  if (action === 'brag') {
+    // 자랑글: 꽝 아닌 기록 + 링크 있음 + 같은 링크를 다른 기록에 쓰지 않았을 때만 (기록당 1회는 원장 유니크로)
+    const { count: already } = await db.from('point_ledger').select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id).eq('reason', 'brag_link').eq('ref_id', log.id)
+    if ((already ?? 0) > 0) bragSkipped = 'already'
+    else if (log.log_type === 'zero') bragSkipped = 'zero'
+    else if (!log.share_url) bragSkipped = 'no_url'
+    else {
+      const { count: reused } = await db.from('catch_logs').select('id', { count: 'exact', head: true })
+        .eq('share_url', log.share_url).neq('id', log.id)
+      if ((reused ?? 0) > 0) bragSkipped = 'reused'
+      else candidates.push({ reason: 'brag_link', amount: rules.brag_link ?? 50 })
+    }
+  } else if (log.log_type === 'zero') {
     candidates.push({ reason: 'zero_log', amount: rules.zero_log ?? 5 })
   } else {
     const checksComplete =
@@ -125,7 +147,7 @@ Deno.serve(async (req) => {
   }
 
   // 6) 스코어 (포인트와 별개)
-  if (log.log_type !== 'zero') {
+  if (action !== 'brag' && log.log_type !== 'zero') {
     const { data: sp } = await db.from('species').select('difficulty').eq('id', log.species_id).maybeSingle()
     const breakdown = {
       count: (log.count ?? 0) * 5,
@@ -147,6 +169,7 @@ Deno.serve(async (req) => {
     total: awarded.reduce((s, a) => s + a.amount, 0),
     balance: bal?.balance ?? 0,
     capped,
+    ...(action === 'brag' ? { brag_skipped: bragSkipped } : {}),
   })
 })
 

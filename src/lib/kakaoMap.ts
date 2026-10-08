@@ -20,6 +20,28 @@ export function loadKakaoMap(): Promise<any> {
   return loading
 }
 
+export type PlaceHit = { name: string; address: string; lat: number; lon: number }
+
+/** 장소·지역 검색 ("속초", "대부도 방아머리"). 장소 검색 결과가 없으면 주소 검색으로 */
+export async function searchPlaces(q: string): Promise<PlaceHit[]> {
+  const kakao = await loadKakaoMap()
+  const keyword = q.trim()
+  if (!keyword) return []
+  const places: PlaceHit[] = await new Promise(resolve => {
+    new kakao.maps.services.Places().keywordSearch(keyword, (res: any[], status: string) => {
+      if (status !== kakao.maps.services.Status.OK) return resolve([])
+      resolve(res.slice(0, 8).map(r => ({ name: r.place_name, address: r.road_address_name || r.address_name, lat: Number(r.y), lon: Number(r.x) })))
+    })
+  })
+  if (places.length) return places
+  return new Promise(resolve => {
+    new kakao.maps.services.Geocoder().addressSearch(keyword, (res: any[], status: string) => {
+      if (status !== kakao.maps.services.Status.OK) return resolve([])
+      resolve(res.slice(0, 8).map(r => ({ name: r.address_name, address: r.address_name, lat: Number(r.y), lon: Number(r.x) })))
+    })
+  })
+}
+
 /** 좌표 → "경기 화성시 서신면" 형태의 지역명. 실패하면 null. */
 export async function regionName(lat: number, lon: number): Promise<string | null> {
   try {
