@@ -10,6 +10,7 @@ import NearbySpotsCard from '../components/NearbySpotsCard'
 import RankingCard from '../components/RankingCard'
 import RegionFishCard from '../components/RegionFishCard'
 import LocalIndex from '../components/LocalIndex'
+import CommunityCard from '../components/CommunityCard'
 import { getPosition } from '../lib/geo'
 import { regionKey, regionLabel } from '../lib/regionStats'
 import TideHero from '../components/TideHero'
@@ -80,6 +81,7 @@ export default function Home() {
       <HourlyForecast pos={pos} />
       <RankingCard />
       <RegionFishCard key={`r${ver}`} compact />
+      <CommunityCard />
       <SeasonCard key={`s${ver}`} />
       <FishingIndexCard key={`f${ver}`} title="주변 주요 낚시 포인트 지수" />
       <NearbySpotsCard key={`n${ver}`} />

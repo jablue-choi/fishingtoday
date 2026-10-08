@@ -15,7 +15,7 @@
 - 지도·역지오코딩: 카카오맵 JS SDK (libraries=services)
 
 ## 구조
-- `supabase/migrations/` 0001~0019. 스키마 변경은 항상 새 번호 파일로 추가하고 `npm run db:push`
+- `supabase/migrations/` 0001~0020. 스키마 변경은 항상 새 번호 파일로 추가하고 `npm run db:push`
 - `supabase/functions/`
   - `award_points` 포인트·스코어 적립 (클라이언트는 point_ledger에 직접 못 씀)
   - `weather` 기상청 초단기실황 프록시 (KMA_SERVICE_KEY)
@@ -49,6 +49,7 @@
 - UI 문구는 한국어 "~해요"체, 버튼은 동작 그대로. 모바일 우선, 하단 탭(홈·검색·기록·랭킹·내 기록)
 - 디자인: src/styles.css 변수(토큰)만 사용, 컴포넌트에 색 코드 직접 쓰지 말 것. 어종 그림은 components/FishArt.tsx (species.code 기준)
 - 랭킹·스코어용 값(어종·마릿수·크기·시각·위치)은 기록 후 24시간 안에만 수정(0019 트리거). 하루 넘게 지나서 적은 기록·관리자 등록 기록은 포인트·랭킹 제외
+- 대화방(community_posts/comments, 0020): 오늘·어종(species.code)·지역(시도 시군구) 방. 신고 3건 자동 숨김, 하루 글 20·댓글 100 제한. 하단 탭 4번째가 대화방(랭킹은 홈에서 진입)
 - 관리자 등록 기록은 출처 필수 + '관리자 등록' 표시. 자랑글 링크는 허용 도메인만(is_allowed_share_url), 기록당 1회 50P
 
 ## 명령
