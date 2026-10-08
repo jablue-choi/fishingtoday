@@ -53,7 +53,7 @@ export async function seasonPicks(area: Area): Promise<SeasonPick[]> {
   const [rows, rules, counts] = await Promise.all([fetchSeasons(), fetchRules(), recentCounts()])
   const month = kstMonth()
   const seasonRules = rules.filter(r => r.rule_type === 'season')
-  const closed = new Set(seasonRules.filter(r => inPeriod(r)).map(r => r.species_id))
+  const closed = new Set(seasonRules.filter(r => !r.region && inPeriod(r)).map(r => r.species_id))   // 지역 한정 금어기는 추천에서 빼지 않음
 
   return rows
     .filter(r => r.area === area && r.months.includes(month) && !closed.has(r.species_id))

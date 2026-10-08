@@ -15,7 +15,7 @@
 - 지도·역지오코딩: 카카오맵 JS SDK (libraries=services)
 
 ## 구조
-- `supabase/migrations/` 0001~0031. 스키마 변경은 항상 새 번호 파일로 추가하고 `npm run db:push`
+- `supabase/migrations/` 0001~0032. 스키마 변경은 항상 새 번호 파일로 추가하고 `npm run db:push`
 - `supabase/functions/`
   - `award_points` 포인트·스코어 적립 (클라이언트는 point_ledger에 직접 못 씀)
   - `weather` 기상청 초단기실황 프록시 (KMA_SERVICE_KEY)

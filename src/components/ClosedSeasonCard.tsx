@@ -26,13 +26,13 @@ export default function ClosedSeasonCard() {
       {now.length === 0 && soon.length === 0 && <div style={{ fontSize: 14 }}>지금은 금어기인 주요 어종이 없어요.</div>}
       {now.map(r => (
         <div key={r.id} className="kv">
-          <span><span className="badge danger" style={{ marginRight: 6 }}>금어기</span>{r.species?.name_ko}</span>
+          <span><span className="badge danger" style={{ marginRight: 6 }}>금어기</span>{r.species?.name_ko}{r.region && <span className="sub"> {r.region}</span>}</span>
           <b>{period(r)}{r.rule_type === 'notice' ? ' 중 1개월' : ''}</b>
         </div>
       ))}
       {soon.map(({ r, d }) => (
         <div key={r.id} className="kv">
-          <span><span className="badge warn" style={{ marginRight: 6 }}>D-{d}</span>{r.species?.name_ko}</span>
+          <span><span className="badge warn" style={{ marginRight: 6 }}>D-{d}</span>{r.species?.name_ko}{r.region && <span className="sub"> {r.region}</span>}</span>
           <b>{period(r)}</b>
         </div>
       ))}
@@ -41,7 +41,7 @@ export default function ClosedSeasonCard() {
           {sizes.map(r => (
             <div key={r.id} className="kv">
               <span>{r.species?.name_ko}{r.note ? <span className="sub"> ({r.note})</span> : null}</span>
-              <b>{r.rule_type === 'min_weight' ? `${r.min_weight_g}g 이하` : `${r.min_size_cm}cm 미만`} 방생</b>
+              <b>{r.rule_type === 'min_weight' ? `${r.min_weight_g}g 이하` : `${r.min_size_cm}cm 이하`} 방생</b>
             </div>
           ))}
         </div>

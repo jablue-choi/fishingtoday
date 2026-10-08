@@ -5,6 +5,7 @@ export type Rule = {
   start_mmdd: string | null; end_mmdd: string | null
   min_size_cm: number | null; min_weight_g: number | null
   measure: string | null; note: string | null; law_ref: string | null
+  region: string | null   // 있으면 그 지역·수역에만 적용 (쏘가리 권역×하천/댐 등) → 막지 않고 안내만
   species: { name_ko: string } | null
 }
 
@@ -12,7 +13,7 @@ let cache: Promise<Rule[]> | null = null
 export function fetchRules(): Promise<Rule[]> {
   if (!cache) {
     cache = Promise.resolve(supabase.from('closed_season_rules')
-      .select('id,species_id,rule_type,start_mmdd,end_mmdd,min_size_cm,min_weight_g,measure,note,law_ref,species(name_ko)'))
+      .select('id,species_id,rule_type,start_mmdd,end_mmdd,min_size_cm,min_weight_g,measure,note,law_ref,region,species(name_ko)'))
       .then(({ data, error }) => { if (error) { cache = null; throw error } return (data ?? []) as unknown as Rule[] })
   }
   return cache
@@ -47,11 +48,14 @@ export function checkCatch(rules: Rule[], speciesId: number, sizeCm: number | nu
   const out: Check[] = []
   for (const r of mine) {
     if (r.rule_type === 'season' && inPeriod(r, d))
-      out.push({ level: 'ban', title: `${past ? '그날은' : '지금은'} 금어기예요 (${period(r)})`, detail: `이 기간엔 잡으면 안 되는 어종이라 방생해야 해요.${r.note ? ` ${r.note}.` : ''}` })
+      out.push(r.region
+        ? { level: 'info', title: `${r.region}이면 금어기예요 (${period(r)})`, detail: '해당 지역·수역이면 방생해야 해요.' }
+        : { level: 'ban', title: `${past ? '그날은' : '지금은'} 금어기예요 (${period(r)})`, detail: `이 기간엔 잡으면 안 되는 어종이라 방생해야 해요.${r.note ? ` ${r.note}.` : ''}` })
     if (r.rule_type === 'notice' && inPeriod(r, d))
       out.push({ level: 'info', title: `금어기 고시 기간이에요 (${period(r)} 중 1개월)`, detail: '올해 고시된 금어기인지 확인해 주세요.' })
-    if (r.rule_type === 'min_size' && r.min_size_cm != null && sizeCm != null && sizeCm < r.min_size_cm)
-      out.push({ level: 'size', title: `금지체장 ${r.min_size_cm}cm 미만이에요`, detail: `${r.measure ?? '전장'} 기준 ${r.min_size_cm}cm보다 작으면 방생해야 해요.` })
+    // 법령은 'n cm 이하' 포획 금지 → 경계값 포함
+    if (r.rule_type === 'min_size' && r.min_size_cm != null && sizeCm != null && sizeCm <= r.min_size_cm)
+      out.push({ level: 'size', title: `금지체장 ${r.min_size_cm}cm 이하예요`, detail: `${r.measure ?? '전장'} 기준 ${r.min_size_cm}cm 이하면 방생해야 해요.` })
     if (r.rule_type === 'min_weight' && r.min_weight_g != null)
       out.push({ level: 'info', title: `금지체중 ${r.min_weight_g}g`, detail: `${r.min_weight_g}g 이하는 방생해야 해요.` })
   }
@@ -67,5 +71,5 @@ export async function banZonesAt(lat: number, lon: number): Promise<{ id: number
 /** 어종 칩 옆 표시용: 지금 금어기인 어종 id */
 export function closedNow(rules: Rule[], at?: Date): Set<number> {
   const d = at ? new Date(at.getTime() + 9 * 3600e3) : kstToday()
-  return new Set(rules.filter(r => r.rule_type === 'season' && inPeriod(r, d)).map(r => r.species_id))
+  return new Set(rules.filter(r => r.rule_type === 'season' && !r.region && inPeriod(r, d)).map(r => r.species_id))
 }
