@@ -7,10 +7,17 @@ import { createClient } from 'npm:@supabase/supabase-js@2'
 
 const DAILY_CAP = 200
 
+const CORS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+}
+
 type Rule = { reason: string; amount: number }
 type Awarded = { reason: string; amount: number }
 
 Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
   if (req.method !== 'POST') return json({ error: 'POST only' }, 405)
 
   const authHeader = req.headers.get('Authorization') ?? ''
@@ -146,6 +153,6 @@ Deno.serve(async (req) => {
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+    headers: { ...CORS, 'Content-Type': 'application/json' },
   })
 }

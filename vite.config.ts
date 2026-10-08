@@ -9,8 +9,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['icon-192.png', 'icon-512.png'],
       manifest: {
-        name: '낚시 기록',
-        short_name: '낚시기록',
+        name: '오늘낚시 - 물때, 날씨, 낚시 기록',
+        short_name: '오늘낚시',
         description: '현위치 찍고 조과 기록, 물때·금어기 자동 확인',
         lang: 'ko',
         start_url: '/',

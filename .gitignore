@@ -4,3 +4,4 @@ dist
 supabase/.env
 supabase/.temp
 .DS_Store
+data/

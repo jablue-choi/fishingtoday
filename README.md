@@ -1,4 +1,4 @@
-# fishing — 낚시 기록 PWA
+# fishingtoday — 오늘낚시 PWA (153랩)
 
 ## 처음 세팅
 ```bash

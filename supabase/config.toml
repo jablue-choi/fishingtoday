@@ -2,3 +2,9 @@ project_id = "ooqqvzftomecnylpsary"
 
 [functions.award_points]
 verify_jwt = true
+
+[functions.weather]
+verify_jwt = true
+
+[functions.fishing_index]
+verify_jwt = true

@@ -1,0 +1,36 @@
+/* 카카오맵 JS SDK 로더. 한 번만 로드해서 재사용. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+declare global { interface Window { kakao: any } }
+
+let loading: Promise<any> | null = null
+
+export function loadKakaoMap(): Promise<any> {
+  if (window.kakao?.maps?.LatLng) return Promise.resolve(window.kakao)
+  if (loading) return loading
+  loading = new Promise((resolve, reject) => {
+    const key = import.meta.env.VITE_KAKAO_JS_KEY
+    if (!key) return reject(new Error('VITE_KAKAO_JS_KEY가 없어요'))
+    const s = document.createElement('script')
+    s.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${key}&libraries=services&autoload=false`
+    s.async = true
+    s.onload = () => window.kakao.maps.load(() => resolve(window.kakao))
+    s.onerror = () => { loading = null; reject(new Error('카카오맵을 불러오지 못했어요')) }
+    document.head.appendChild(s)
+  })
+  return loading
+}
+
+/** 좌표 → "경기 화성시 서신면" 형태의 지역명. 실패하면 null. */
+export async function regionName(lat: number, lon: number): Promise<string | null> {
+  try {
+    const kakao = await loadKakaoMap()
+    const geocoder = new kakao.maps.services.Geocoder()
+    return await new Promise(resolve => {
+      geocoder.coord2RegionCode(lon, lat, (res: any[], status: string) => {
+        if (status !== kakao.maps.services.Status.OK || !res?.length) return resolve(null)
+        const r = res.find(x => x.region_type === 'H') ?? res[0] // 행정동 우선
+        resolve([r.region_1depth_name, r.region_2depth_name, r.region_3depth_name].filter(Boolean).join(' '))
+      })
+    })
+  } catch { return null }
+}

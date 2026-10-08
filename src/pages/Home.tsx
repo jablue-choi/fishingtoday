@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase, signOut } from '../lib/supabase'
+import SearchBar from '../components/SearchBar'
+import FishingIndexCard from '../components/FishingIndexCard'
+import ClosedSeasonCard from '../components/ClosedSeasonCard'
+import SeasonCard from '../components/SeasonCard'
 
 export default function Home() {
   const [nick, setNick] = useState('')
@@ -19,15 +23,19 @@ export default function Home() {
 
   return (
     <div className="page">
+      <SearchBar />
       <div className="row" style={{ alignItems: 'center', marginBottom: 12 }}>
         <h1 style={{ margin: 0 }}>안녕하세요, {nick}님</h1>
         <span className="pill" style={{ flex: 0 }}>{balance.toLocaleString()}P</span>
       </div>
-      <div className="card">
-        <div style={{ fontWeight: 700 }}>오늘</div>
-        <div style={{ color: 'var(--mute)', fontSize: 13 }}>물때·날씨는 기록 화면에서 현위치 찍으면 자동으로 들어가요.</div>
-      </div>
+      <FishingIndexCard />
+      <SeasonCard />
+      <ClosedSeasonCard />
       <Link to="/log" className="btn" style={{ textAlign: 'center', textDecoration: 'none' }}>현위치 찍고 기록 시작</Link>
+      <div className="row" style={{ marginTop: 10 }}>
+        <Link to="/search?mode=recommend" className="btn ghost" style={{ textAlign: 'center', textDecoration: 'none' }}>이번 주 어디 갈까?</Link>
+        <Link to="/me" className="btn ghost" style={{ textAlign: 'center', textDecoration: 'none' }}>내 기록 보기</Link>
+      </div>
       <button className="btn ghost" style={{ marginTop: 24 }} onClick={() => signOut()}>로그아웃</button>
     </div>
   )

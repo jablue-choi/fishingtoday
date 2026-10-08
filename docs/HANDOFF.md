@@ -1,0 +1,61 @@
+# 오늘낚시 작업 현황 (2026-10-07, claude.ai 채팅 → 로컬 Claude Code 인계)
+
+## 완료된 것
+| 영역 | 내용 | 관련 파일 |
+|---|---|---|
+| 기획 | 페르소나·유저 시나리오·유저 플로우·화면 11개 와이어프레임 | docs/기획서.html |
+| 이름 | 오늘낚시 / Fishing Today, 사업자명 153랩 | CLAUDE.md |
+| DB | 프로필·조과·사진·포인트 원장·스코어·배지·스팟·편의시설·금어기 | migrations 0001~0008 |
+| 로그인 | 카카오 로그인 동작 확인 | src/lib/supabase.ts |
+| 기록 | 현위치 → 카카오맵 핀 이동 → 기상청 날씨 자동 입력 → 어종·사이즈·방법·미끼 체크 → 사진 → 저장 | src/pages/LogCatch.tsx |
+| 지역명 | 저장 시 카카오 Geocoder로 region 저장, 공개 체크박스(기본 ON, 500m 범위 공개) | LogCatch, kakaoMap.ts |
+| 포인트 | award_points: 기본 20 / 사진 30 / 첫 방문 10 / 방생 30 / 꽝 5, 하루 200P 상한 | functions/award_points |
+| 내 기록 | 리포트(출조·마릿수·꽝 비율·어종·방법·미끼·월별) / 방문 지도 / 목록, 기간 필터 | MyRecords.tsx, records.ts, HistoryMap.tsx |
+| 검색 | 상단 검색창, 지역·어종·추천(최근 14일) 탭, 최근 검색어 | Search.tsx, search.ts |
+| 공공데이터 | 바다낚시지수(갯바위·선상), 바다여행지수, 선박운항지수(선상 탭) — 홈 카드, 장소 중복 제거 | functions/fishing_index, FishingIndexCard.tsx |
+| 포인트 데이터 | 갯바위·선상 낚시포인트, 전국낚시터 CSV 가져오기 스크립트 (아직 실제 CSV 미적재) | scripts/import-spots.mjs |
+| 금어기 | 21개 규칙(감성돔·주꾸미·광어 35cm 등), 홈 카드, 어종 칩 표시, 저장 시 방생 강제 | 0008, rules.ts, ClosedSeasonCard.tsx |
+| 샘플 | 샘플 유저 6명·기록 220건 | supabase/seed_sample.sql |
+| 닉네임 | 가입 시 임의 닉네임, 첫 로그인 닉네임 설정 화면, set_nickname()로만 변경, anon은 profiles·public_catch_v 조회 불가 | 0009, NicknameSetup.tsx, profile.ts |
+| 제철 어종 | species_seasons 20종·31건, 금어기 제외·제철 우선·최근 30일 조황순, 해역 추정(서해/남해/동해/제주/민물), 홈·검색 추천 탭 카드 | 0010, seasons.ts, SeasonCard.tsx |
+| 아이콘 | 시안 여러 개(찌, 사람, 낚싯대+물고기 반잠김 등). 최종 미선택, 현재 public/ 아이콘은 임시 | public/icon-*.png |
+
+## 로컬에서 먼저 확인할 것 — 2026-10-08 전부 확인 완료 (0001~0010 원격 적용, 함수 3개 최신 배포, 샘플 적재)
+1. 위 파일들이 다 있는지, `npm run build` 통과하는지
+2. `supabase migration list`로 0001~0008이 원격에 적용됐는지 → 아니면 `npm run db:push`
+3. 함수 3개(award_points, weather, fishing_index) 최신본 배포 → `supabase functions deploy <이름>`
+4. award_points CORS 수정본이 배포됐는지: `curl.exe -i -X OPTIONS https://ooqqvzftomecnylpsary.supabase.co/functions/v1/award_points` → 200이어야 함
+5. 카카오맵 401 해결됐는지 (JavaScript 키에 http://localhost:5173 도메인 등록, 카카오맵 사용 설정 ON)
+6. seed_sample.sql을 SQL Editor로 넣었는지 (검색 탭에 다른 사람 기록이 보이면 OK)
+
+## 알려진 문제 / 해야 할 것 (우선순위 순)
+1. ~~시즌별 추천 어종~~ 완료 (0010)
+2. ~~실명 노출~~ 완료 (0009)
+3. **[다음 작업] 좌표 노출 구멍**: catch_logs RLS가 radius/public 기록을 원본 행(정확한 geom 포함)째 조회 허용 (anon도 가능). catch_logs select는 본인만으로 좁히고, 남의 기록은 public_catch_v를 security definer 뷰(또는 함수)로 제공. spot_heatmap도 같이 점검
+4. 물때: 기록 화면에 "물때: 준비 중". 바다낚시지수 응답의 물때(tdlvHrCn)나 바다누리 조석으로 catch_logs.tide_mul 채우기
+5. 사진 EXIF 검증(exifr): 지금은 업로드만 하면 exif_ok=true
+6. 기록 저장 결과 화면의 적립 사유가 영문 코드(base_log 등)로 보임 → 한글 라벨 (MyRecords의 REASON 맵 재사용)
+7. 공공데이터 CSV 실제 적재(갯바위·선상 포인트, 전국낚시터) 후 홈 "주변 포인트"(rpc spots_near) 노출
+8. 아이콘 최종 선택 → public/ 교체
+9. Vercel 배포 → 카카오(JS 키 도메인, Redirect), Supabase(URL Configuration)에 배포 주소 추가 → 폰 설치 테스트
+10. 네이버 로그인 (Supabase 기본 provider 아님 → 엣지 함수로 OAuth 처리)
+
+## (완료) 시즌별 추천 어종 스펙 — 0009 대신 0010으로 구현
+- 목적: "이번 달 뭐 잡으러 갈까?"에 답하기. 홈 카드 + 검색 추천 탭에 노출
+- 데이터: 새 마이그레이션 0009
+  - `species_seasons`(species_id, area: 서해/남해/동해/제주/민물, months int[], peak_months int[], methods text[], baits text[], tip text)
+  - 주요 어종 20여 종 시드: 주꾸미·갑오징어(서해 가을), 우럭·광어(서해 봄~가을), 감성돔(남해 가을~겨울, 5월 금어기), 무늬오징어(남해·제주 가을), 고등어·전갱이·학꽁치(동해·남해 가을), 볼락(겨울~봄), 삼치(가을), 망둥어(서해 가을), 벵에돔(제주·남해 여름~가을), 대구(동해 겨울), 붕어·배스(민물 봄·가을) 등
+- 로직
+  - 이번 달이 months에 있으면 후보, peak_months면 "제철"
+  - **금어기인 어종은 제외** (rules.ts inPeriod 재사용), 곧 금어기면 "D-n 금어기 시작" 표시
+  - 사용자 기록 반영: public_catch_v 최근 30일 해당 어종 마릿수로 정렬 가중치
+  - 위치(getLastPos)로 area 추정: 서해/남해/동해/제주 (경도·위도 경계로 단순 판정)
+- UI: 홈 "이번 달 제철 어종" 카드(어종명, 제철 배지, 추천 방법·미끼, 최근 조황 n마리) → 누르면 /search?mode=species&q=어종
+- 계절 데이터 값은 안내용이므로 화면에 "지역·수온에 따라 달라요" 문구
+
+## 나중에 (2차 이후)
+- 포인트샵(제휴 낚시점 바코드 쿠폰 미끼 교환), 이벤트 응모, 동호회 랭킹
+- 위치 기반 1일 1회 푸시 (토스페이처럼 낚시터·바다 근처 진입 시) — PWA로 불가, Capacitor 등 네이티브 전환 필요
+- 강나루/바다나루처럼 민물·바다 모드 분리 검토
+- 도메인 joyluck.kr 등은 이름 변경으로 보류, 필요 시 fishingtoday 계열로 재검토
+- 레드펄스 바다낚시 카페: 크롤링 대신 매니저에게 제휴 제안, 회원 베타테스터 초대

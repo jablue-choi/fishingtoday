@@ -1,45 +1,50 @@
-# 낚시 기록 앱 (fishing)
+# 오늘낚시 (Fishing Today)
 
-개인 프로젝트. 현위치를 찍으면 날씨·물때가 자동으로 들어가고, 어종·사이즈·마릿수·방법·미끼를 체크하면 기록이 쌓이는 PWA. 기록 + 사진 인증 → 포인트 적립. 1차는 포인트 **적립까지만**, 사용·이벤트는 2차.
+개인 프로젝트 (153랩). 현위치를 찍으면 날씨·물때가 자동으로 들어가고, 어종·사이즈·마릿수·방법·미끼를 체크하면 기록이 쌓이는 PWA. 기록 + 사진 인증 → 포인트 적립. 공공데이터(바다낚시지수 등)와 사용자 기록으로 출조지를 추천한다.
+작업 현황·남은 일은 `docs/HANDOFF.md`, 화면 설계는 `docs/기획서.html`.
+
+## 이름
+- 앱: 오늘낚시 (항상 붙여 씀) / 영문 Fishing Today / ID·저장소 `fishingtoday`
+- 사업자명(개발자명): 153랩 / 153 Lab / `153lab`
+- 스토어 표기: 오늘낚시 - 물때, 날씨, 낚시 기록 / 해시태그 #오낚완
 
 ## 스택
-- 프론트: Vite + React 19 + TypeScript, react-router, vite-plugin-pwa
-- 백엔드: Supabase (Postgres + PostGIS, Auth, Storage, Edge Functions/Deno)
-- 프로젝트: https://ooqqvzftomecnylpsary.supabase.co
-- 외부 API: 기상청 초단기실황(공공데이터포털), 바다누리 조석(예정), 카카오 로그인
+- 프론트: Vite + React 19 + TypeScript, react-router, vite-plugin-pwa (Windows 개발 환경, PowerShell)
+- 백엔드: Supabase (Postgres + PostGIS, Auth, Storage, Edge Functions/Deno) — https://ooqqvzftomecnylpsary.supabase.co
+- 로그인: 카카오 (Supabase 기본 provider, 개인 개발자 비즈앱 전환 + 이메일 동의항목). 네이버는 미구현
+- 지도·역지오코딩: 카카오맵 JS SDK (libraries=services)
 
 ## 구조
-- `supabase/migrations/` 스키마. 0001이 전체, 이후 번호 증가. 스키마 변경은 항상 새 마이그레이션 파일로.
-- `supabase/functions/award_points/` 포인트 적립 엣지 함수. 클라이언트는 point_ledger에 직접 못 씀(RLS).
-- `src/lib/` supabase 클라이언트, 위치(geo), 기상청(weather), 포인트 호출(points)
-- `src/pages/` Home / LogCatch / MyRecords
+- `supabase/migrations/` 0001~0010. 스키마 변경은 항상 새 번호 파일로 추가하고 `npm run db:push`
+- `supabase/functions/`
+  - `award_points` 포인트·스코어 적립 (클라이언트는 point_ledger에 직접 못 씀)
+  - `weather` 기상청 초단기실황 프록시 (KMA_SERVICE_KEY)
+  - `fishing_index` 국립해양조사원 지수 프록시 + 3시간 캐시. gubun: 갯바위·선상(바다낚시지수 fcstFishingv2), 바다여행(fcstSeaTripv2), 선박운항(shipIndex, category=AREA 필수, 좌표 없음 → 함수 안 권역 근사 좌표)
+- `supabase/seed_sample.sql` 개발용 샘플(유저 6명·기록 220건, is_sample=true). 서비스 전 삭제
+- `scripts/import-spots.mjs` 공공데이터 포인트 CSV → spots (`npm run import:spots -- rock|boat|ground 파일.csv [--dry]`)
+- `src/pages` Home / Search / LogCatch / MyRecords / NicknameSetup(첫 로그인)
+- `src/components` MapPicker, HistoryMap, SearchBar, FishingIndexCard, ClosedSeasonCard, SeasonCard
+- `src/lib` supabase, geo, weather, points, records, search, kakaoMap, fishingIndex, rules, profile, seasons
 
-## 규칙 (지켜줘)
-- 포인트는 원장(point_ledger) 이력 합산. 잔액 컬럼 만들지 말 것. 적립 금액은 point_rules 테이블.
-- 포인트와 스코어는 분리. 포인트 써도 스코어 안 줄어듦.
-- catch_logs.log_type: catch / release(방생) / zero(꽝). 별도 테이블 만들지 말 것.
-- 자동 입력값(날씨·물때)은 기록 시점 스냅샷으로 catch_logs에 그대로 저장.
-- 공개 기록 좌표는 노출 금지. spot_heatmap 뷰(500m 격자)만 사용.
-- UI 문구는 한국어, 존댓말 "~해요"체. 버튼은 동작을 그대로 ("저장하고 60P 받기").
-- 모바일 우선. 폰 한 손 조작 기준, 하단 탭.
+## 키·시크릿 (값은 절대 코드·채팅·커밋에 넣지 말 것)
+- `.env.local` (git 제외): VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, VITE_KAKAO_JS_KEY
+- `supabase/.env` (git 제외, import 스크립트용): SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+- Supabase 시크릿: KMA_SERVICE_KEY(공공데이터포털, 기상청·해양지수 공용), 선택: KMA_AUTH_KEY, FISHING_INDEX_URL, SEA_TRIP_URL, SHIP_INDEX_URL
+- 기상청·공공데이터 키는 프론트에 두지 않는다. 반드시 엣지 함수 경유
 
-## 1차 작업 순서
-1. [x] 스키마 / 골격
-2. [ ] 카카오 로그인 동작 확인 (Supabase Auth provider 설정 + 카카오 콘솔 Redirect URI)
-3. [ ] Storage 버킷 `catch-photos` 생성 + 정책(본인 폴더만 쓰기)
-4. [ ] 현위치 → 기상청 자동 입력 동작 확인
-5. [ ] 조과 저장 → award_points → 잔액 갱신 확인
-6. [ ] 물때: 바다누리 API → lib/tide.ts, catch_logs.tide_mul 채우기
-7. [ ] 금어기 경고 바텀시트 (closed_season_rules 조회, 어종+사이즈 입력 시)
-8. [ ] 사진 EXIF 검증 (exifr) → catch_photos.exif_ok 실제 판정
-9. [ ] PWA 아이콘 + 폰 설치 테스트 + Vercel 배포
-그다음: 추천 / 히트맵 / 주변 편의시설 / 네이버 로그인
-
-## 2차 (아직 하지 말 것)
-포인트샵(미끼 교환), 이벤트 응모, 동호회 랭킹
+## 규칙
+- 포인트는 원장(point_ledger) 이력 합산. 잔액 컬럼 금지. 금액은 point_rules 테이블. (user_id, reason, ref_id) 유니크로 중복 적립 방지
+- 포인트와 스코어는 분리. 1차는 포인트 적립만, 사용·이벤트는 2차
+- catch_logs.log_type: catch / release(방생) / zero(꽝). 별도 테이블 금지
+- 자동 입력값(날씨·물때)은 기록 시점 스냅샷으로 catch_logs에 저장
+- 다른 사람 기록은 public_catch_v(좌표 500m 반올림)로만 보여준다. 정확한 좌표 노출 금지
+- 닉네임은 set_nickname() RPC로만 변경. profiles는 로그인 사용자에게 id·nickname 등 공개 컬럼만 grant (카카오 실명 저장 금지)
+- 금어기·금지체장 해당 시 '방생했어요' 체크 전 저장 불가. 법령 값은 안내용, 화면에 '국가법령정보센터 확인' 문구 유지
+- 외부 카페·커뮤니티 글 크롤링 금지. 데이터는 사용자 기록·공공데이터·정식 제휴로만
+- 엣지 함수는 CORS preflight(OPTIONS) 처리 필수 (빠지면 브라우저에서 'Failed to send a request')
+- UI 문구는 한국어 "~해요"체, 버튼은 동작 그대로. 모바일 우선, 하단 탭
 
 ## 명령
-npm run dev / npm run db:push / npm run fn:serve / npm run fn:deploy
-
-## 참고 문서
-docs/기획서.html (시나리오 + 와이어프레임)
+- 개발: `npm run dev` / 빌드 확인: `npm run build`
+- DB: `npm run db:push` / 함수: `supabase functions deploy <이름>` / 시크릿: `supabase secrets set KEY=값`
+- 작업 후에는 `npm run build`로 타입·빌드 확인하고, 스키마를 바꿨으면 db:push, 함수를 바꿨으면 해당 함수 deploy
