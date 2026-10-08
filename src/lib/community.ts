@@ -4,13 +4,14 @@ import { friendlyError } from './moderation'
 export type RoomType = 'today' | 'species' | 'region'
 export type Post = {
   id: string; room_type: RoomType; room_key: string; body: string; region: string | null
+  tags: string[]; region_key: string | null
   comment_count: number; created_at: string; user_id: string; hidden: boolean
   profiles: { nickname: string } | null
 }
 export type Comment = { id: string; post_id: string; body: string; created_at: string; user_id: string; hidden: boolean; profiles: { nickname: string } | null }
 export type RoomStat = { room_type: RoomType; room_key: string; posts: number; last_at: string }
 
-const POST_COLS = 'id,room_type,room_key,body,region,comment_count,created_at,user_id,hidden,profiles(nickname)'
+const POST_COLS = 'id,room_type,room_key,body,region,tags,region_key,comment_count,created_at,user_id,hidden,profiles(nickname)'
 const COMMENT_COLS = 'id,post_id,body,created_at,user_id,hidden,profiles(nickname)'
 
 /** 한국 시간 오늘 0시 */
@@ -44,8 +45,9 @@ export async function listComments(postId: string): Promise<Comment[]> {
   return (data ?? []) as unknown as Comment[]
 }
 
-export async function createPost(type: RoomType, key: string, body: string, region: string | null) {
-  const { data, error } = await supabase.from('community_posts').insert({ room_type: type, room_key: key, body: body.trim(), region }).select('id').single()
+export async function createPost(type: RoomType, key: string, body: string, region: string | null, regionKey: string | null = null, tags: string[] = []) {
+  const { data, error } = await supabase.from('community_posts')
+    .insert({ room_type: type, room_key: key, body: body.trim(), region, region_key: regionKey, tags: tags.slice(0, 5) }).select('id').single()
   if (error) throw new Error(friendlyError(error, '글을 올리지 못했어요. 2자 이상 1,000자 이하로 써 주세요.'))
   return data.id as string
 }
@@ -61,6 +63,33 @@ export async function deleteComment(id: string) { const { error } = await supaba
 export async function report(type: 'post' | 'comment', id: string, reason: string) {
   const { error } = await supabase.from('community_reports').insert({ target_type: type, target_id: id, reason })
   if (error) throw new Error(error.code === '23505' ? '이미 신고했어요.' : '신고하지 못했어요.')
+}
+
+/** 흔히 틀리게 쓰는 어종 이름 → 정식 이름 */
+const ALIAS: Record<string, string> = { '쭈꾸미': '주꾸미', '쭈구미': '주꾸미', '갑오': '갑오징어', '문어': '참문어', '넙치': '광어', '조피볼락': '우럭', '망둑어': '망둥어', '망둥이': '망둥어', '무늬': '무늬오징어', '감생이': '감성돔', '뺀찌': '벵에돔' }
+
+/** 본문에서 어종 이름 찾기 → 태그 (긴 이름 우선: '쥐노래미'가 있으면 '노래미'는 빼기) */
+export function detectTags(text: string, speciesNames: string[]): string[] {
+  const t = text.replace(/\s+/g, '')
+  const found = new Set<string>()
+  for (const n of [...speciesNames].sort((a, b) => b.length - a.length)) {
+    if (t.includes(n) && ![...found].some(f => f.includes(n))) found.add(n)
+  }
+  for (const [a, n] of Object.entries(ALIAS)) if (t.includes(a) && speciesNames.includes(n) && ![...found].some(f => f.includes(n))) found.add(n)
+  return [...found].slice(0, 5)
+}
+
+/** 검색용: 어종 태그·지역으로 대화방 글 찾기 */
+export async function searchPosts(species: string[], region: string, limit = 5): Promise<Post[]> {
+  if (!species.length && !region) return []
+  let q = supabase.from('community_posts').select(POST_COLS).order('created_at', { ascending: false }).limit(limit)
+  if (species.length) q = q.overlaps('tags', species)
+  for (const r of region.split(' ').filter(Boolean)) {
+    const k = r.replace(/(도|시|군|구|읍|면|동|리)$/, '') || r
+    q = q.or(`region_key.ilike.%${k}%,region.ilike.%${k}%,body.ilike.%${k}%`)
+  }
+  const { data } = await q
+  return (data ?? []) as unknown as Post[]
 }
 
 export async function roomStats(): Promise<RoomStat[]> {

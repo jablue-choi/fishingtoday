@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { signOut } from '../lib/supabase'
+import { signOut, signInWithKakao } from '../lib/supabase'
+import { useAuth } from '../lib/auth'
 import { getThemePref, setThemePref, type ThemePref } from '../lib/theme'
 import { isAdmin } from '../lib/admin'
 
@@ -13,7 +14,8 @@ const THEMES: { k: ThemePref; label: string }[] = [
 export default function Settings() {
   const [theme, setTheme] = useState<ThemePref>(getThemePref)
   const [admin, setAdmin] = useState(false)
-  useEffect(() => { isAdmin().then(setAdmin) }, [])
+  const { session } = useAuth()
+  useEffect(() => { if (session) isAdmin().then(setAdmin) }, [session])
 
   return (
     <div className="page">
@@ -34,7 +36,9 @@ export default function Settings() {
         <Link to="/admin" className="btn dark" style={{ marginBottom: 12 }}>관리자: 조과 등록 · 회원 · 신고</Link>
       )}
 
-      <button className="btn ghost" onClick={() => signOut()}>로그아웃</button>
+      {session
+        ? <button className="btn ghost" onClick={() => signOut()}>로그아웃</button>
+        : <button className="btn kakao" onClick={() => signInWithKakao()}>카카오로 로그인·가입</button>}
       <p className="note" style={{ textAlign: 'center', marginTop: 24 }}>오늘낚시 · © 153랩</p>
     </div>
   )

@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Routes, Route, NavLink } from 'react-router-dom'
-import type { Session } from '@supabase/supabase-js'
-import { supabase, signInWithKakao } from './lib/supabase'
+import { AuthProvider, LoginGate, useAuth } from './lib/auth'
 import Home from './pages/Home'
 import LogCatch from './pages/LogCatch'
 import MyRecords from './pages/MyRecords'
@@ -22,15 +21,18 @@ import Places from './pages/Places'
 import { fetchMyProfile } from './lib/profile'
 
 export default function App() {
-  const [session, setSession] = useState<Session | null | undefined>(undefined)
+  return (
+    <AuthProvider>
+      <Shell />
+    </AuthProvider>
+  )
+}
+
+/** 로그인 전에도 그대로 둘러보기. 기록·내 기록·글쓰기·관리자는 LoginGate가 로그인 안내로 바꿔 보여 줌 */
+function Shell() {
+  const { session, ready } = useAuth()
   const [nickSet, setNickSet] = useState<boolean | undefined>(undefined)
   const uid = session?.user.id
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setSession(data.session))
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s))
-    return () => sub.subscription.unsubscribe()
-  }, [])
 
   useEffect(() => {
     setNickSet(undefined)
@@ -39,29 +41,28 @@ export default function App() {
     fetchMyProfile().then(p => setNickSet(p?.nickname_set ?? true)).catch(() => setNickSet(true))
   }, [uid])
 
-  if (session === undefined) return null
-  if (!session) return <Landing />
-  if (nickSet === undefined) return null
-  if (!nickSet) return <NicknameSetup onDone={() => setNickSet(true)} />
+  if (!ready) return null
+  if (uid && nickSet === undefined) return null
+  if (uid && !nickSet) return <NicknameSetup onDone={() => setNickSet(true)} />
 
   return (
     <>
       <Routes>
         <Route path="/" element={<Home />} />
-        <Route path="/log" element={<LogCatch />} />
+        <Route path="/log" element={<LoginGate why="조과를 기록하려면"><LogCatch /></LoginGate>} />
         <Route path="/search" element={<Search />} />
-        <Route path="/me" element={<MyRecords />} />
-        <Route path="/me/:id" element={<RecordEdit />} />
+        <Route path="/me" element={<LoginGate why="내 기록을 보려면"><MyRecords /></LoginGate>} />
+        <Route path="/me/:id" element={<LoginGate why="기록을 고치려면"><RecordEdit /></LoginGate>} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/ranking" element={<Ranking />} />
         <Route path="/community" element={<Community />} />
         <Route path="/feed" element={<Feed />} />
-        <Route path="/feed/new" element={<FeedNew />} />
-        <Route path="/feed/:id" element={<FeedPost />} />
+        <Route path="/feed/new" element={<LoginGate why="피드에 글을 올리려면"><FeedNew /></LoginGate>} />
+        <Route path="/feed/:id" element={<LoginGate why="글과 댓글을 보려면"><FeedPost /></LoginGate>} />
         <Route path="/places" element={<Places />} />
-        <Route path="/community/post/:id" element={<CommunityPost />} />
+        <Route path="/community/post/:id" element={<LoginGate why="글과 댓글을 보려면"><CommunityPost /></LoginGate>} />
         <Route path="/community/:type/:key" element={<CommunityRoom />} />
-        <Route path="/admin" element={<Admin />} />
+        <Route path="/admin" element={<LoginGate why="관리자 화면은"><Admin /></LoginGate>} />
       </Routes>
       <nav className="tabs">
         <NavLink to="/" end className={({ isActive }) => (isActive ? 'on' : '')}><Icon name="home" size={20} />홈</NavLink>
@@ -71,18 +72,5 @@ export default function App() {
         <NavLink to="/me" className={({ isActive }) => (isActive ? 'on' : '')}><Icon name="user" size={20} />내 기록</NavLink>
       </nav>
     </>
-  )
-}
-
-function Landing() {
-  return (
-    <div className="page" style={{ display: 'flex', flexDirection: 'column', minHeight: '100dvh', justifyContent: 'flex-end' }}>
-      <img src="/icon-192.png" alt="" width={88} height={88} style={{ marginBottom: 16 }} />
-      <h1 style={{ fontSize: 30 }}>오늘낚시</h1>
-      <p style={{ color: 'var(--mute)', marginTop: 0 }}>현위치 찍으면 물때·날씨가 자동으로,<br />기록하면 포인트가 쌓여요</p>
-      <button className="btn kakao" onClick={() => signInWithKakao()}>카카오로 3초 만에 시작</button>
-      <p style={{ fontSize: 12, color: 'var(--mute)', textAlign: 'center' }}>네이버 로그인은 준비 중</p>
-      <p style={{ fontSize: 11, color: 'var(--mute)', textAlign: 'center', marginTop: 16 }}>© 153랩</p>
-    </div>
   )
 }

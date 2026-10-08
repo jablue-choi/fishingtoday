@@ -5,6 +5,7 @@ import { fetchSpecies, type Species } from '../lib/species'
 import { ago } from '../lib/community'
 import FishArt from '../components/FishArt'
 import Icon from '../components/Icon'
+import { useAuth, useGuardClick } from '../lib/auth'
 
 /** 피드: 장비 자랑 · 미끼 레시피 · 영상 */
 export default function Feed() {
@@ -14,6 +15,8 @@ export default function Feed() {
   const [liked, setLiked] = useState<Set<string>>(new Set())
   const [species, setSpecies] = useState<Species[]>([])
   const [err, setErr] = useState('')
+  const { session, requireLogin } = useAuth()
+  const guard = useGuardClick()
 
   useEffect(() => {
     setPosts(null); setErr('')
@@ -22,6 +25,7 @@ export default function Feed() {
   useEffect(() => { fetchSpecies().then(setSpecies).catch(() => setSpecies([])) }, [])
 
   async function like(p: FeedPost) {
+    if (!requireLogin('좋아요를 누르려면')) return
     const was = liked.has(p.id)
     try {
       await toggleLike(p.id, was)
@@ -41,6 +45,7 @@ export default function Feed() {
         {FEED_KINDS.map(k => <button key={k.k} className={`chip ${kind === k.k ? 'on' : ''}`} onClick={() => setParams({ kind: k.k }, { replace: true })}>{k.label}</button>)}
       </div>
 
+      {!session && <div className="card plain" style={{ fontSize: 13 }}>지금은 글 목록만 보여요. 로그인하면 글·댓글을 보고 좋아요도 누를 수 있어요.</div>}
       {err && <div className="error">{err}</div>}
       {!posts && !err && <div className="empty">불러오는 중…</div>}
       {posts?.length === 0 && <div className="card plain empty">아직 글이 없어요. 첫 글을 올려 보세요. (하루 첫 글 +20P)</div>}
@@ -51,7 +56,7 @@ export default function Feed() {
           const img = p.kind === 'video' && p.video_id ? thumbOf(p.video_id) : p.photo_url
           return (
             <div key={p.id} className="card" style={{ marginBottom: 0, padding: 0, overflow: 'hidden' }}>
-              <Link to={`/feed/${p.id}`} style={{ textDecoration: 'none', color: 'var(--ink)', display: 'block' }}>
+              <Link to={`/feed/${p.id}`} onClick={guard} style={{ textDecoration: 'none', color: 'var(--ink)', display: 'block' }}>
                 {img && (
                   <div style={{ position: 'relative', aspectRatio: '16 / 9', background: 'var(--line-soft)' }}>
                     <img src={img} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
@@ -74,7 +79,7 @@ export default function Feed() {
                 <span className="sub">{p.profiles?.nickname ?? ''} · {ago(p.created_at)}</span>
                 <span style={{ display: 'flex', gap: 6 }}>
                   <button className={`chip sm ${liked.has(p.id) ? 'on' : ''}`} onClick={() => like(p)} aria-pressed={liked.has(p.id)}>좋아요 {p.like_count}</button>
-                  <Link to={`/feed/${p.id}`} className="chip sm" style={{ textDecoration: 'none' }}>댓글 {p.comment_count}</Link>
+                  <Link to={`/feed/${p.id}`} onClick={guard} className="chip sm" style={{ textDecoration: 'none' }}>댓글 {p.comment_count}</Link>
                 </span>
               </div>
             </div>

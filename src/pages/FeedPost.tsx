@@ -6,6 +6,7 @@ import { reportContent, myBlockStatus, blockText } from '../lib/moderation'
 import { ago, myUserId } from '../lib/community'
 import { hasProfanity, PROFANITY_MSG } from '../lib/profanity'
 import FishArt from '../components/FishArt'
+import { useAuth } from '../lib/auth'
 
 /** 피드 글 하나: 사진·영상, 장비·레시피, 좋아요, 댓글 */
 export default function FeedPost() {
@@ -20,27 +21,32 @@ export default function FeedPost() {
   const [msg, setMsg] = useState('')
   const [busy, setBusy] = useState(false)
   const [block, setBlock] = useState<{ blocked: boolean; until: string | null; reason: string | null } | null>(null)
+  const { session, requireLogin } = useAuth()
 
   const loadComments = () => listFeedComments(id).then(setComments)
   useEffect(() => {
     getFeed(id).then(setPost); loadComments(); myLikes([id]).then(s => setLiked(s.has(id)))
-    fetchSpecies().then(setSpecies).catch(() => setSpecies([])); myUserId().then(setMe); myBlockStatus().then(setBlock)
+    fetchSpecies().then(setSpecies).catch(() => setSpecies([])); myUserId().then(setMe)
   }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (session) myBlockStatus().then(setBlock) }, [session])
 
   if (post === undefined) return <div className="page"><div className="empty">불러오는 중…</div></div>
   if (!post) return <div className="page"><h1>글을 찾을 수 없어요</h1><Link to="/feed" className="btn ghost">피드로</Link></div>
 
   const sp = species.find(s => s.code === post.species_code)
   async function like() {
+    if (!requireLogin('좋아요를 누르려면')) return
     try { await toggleLike(post!.id, liked); setLiked(!liked); setPost(p => p && { ...p, like_count: p.like_count + (liked ? -1 : 1) }) }
     catch (e) { setMsg((e as Error).message) }
   }
   async function send() {
+    if (!requireLogin('댓글을 달려면')) return
     if (!body.trim() || busy || hasProfanity(body)) return
     setBusy(true); setMsg('')
     try { await addFeedComment(id, body); setBody(''); await loadComments() } catch (e) { setMsg((e as Error).message) } finally { setBusy(false) }
   }
   async function doReport(type: 'feed' | 'feed_comment', target: string) {
+    if (!requireLogin('신고하려면')) return
     const reason = window.prompt('신고 이유를 짧게 적어 주세요 (욕설, 광고, 도용 등)')
     if (reason === null) return
     try { await reportContent(type, target, reason); setMsg('신고했어요. 3번 쌓이면 자동으로 가려져요.') } catch (e) { setMsg((e as Error).message) }
@@ -106,7 +112,7 @@ export default function FeedPost() {
       {msg && <div className="card plain" style={{ fontSize: 14 }}>{msg}</div>}
       {block?.blocked ? <div className="card plain error">{blockText(block)}</div> : (
         <div className="card">
-          <textarea value={body} onChange={e => setBody(e.target.value)} maxLength={500} rows={2} placeholder="댓글을 남겨 주세요" aria-label="댓글"
+          <textarea value={body} onChange={e => setBody(e.target.value)} onFocus={() => { if (!session) requireLogin('댓글을 달려면') }} maxLength={500} rows={2} placeholder="댓글을 남겨 주세요" aria-label="댓글"
             style={{ width: '100%', padding: 12, border: '1px solid var(--line)', borderRadius: 12, background: 'var(--surface)', color: 'var(--ink)', fontSize: 16, resize: 'vertical' }} />
           {hasProfanity(body) && <div className="error" style={{ marginTop: 6 }}>{PROFANITY_MSG}</div>}
           <div className="item-row" style={{ marginTop: 8 }}>

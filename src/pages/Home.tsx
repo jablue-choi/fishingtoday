@@ -12,6 +12,7 @@ import RegionFishCard from '../components/RegionFishCard'
 import LocalIndex from '../components/LocalIndex'
 import CommunityCard from '../components/CommunityCard'
 import NearbyFacilities from '../components/NearbyFacilities'
+import { useAuth } from '../lib/auth'
 import { getPosition } from '../lib/geo'
 import { regionKey, regionLabel } from '../lib/regionStats'
 import TideHero from '../components/TideHero'
@@ -31,8 +32,10 @@ export default function Home() {
   const [place, setPlace] = useState(loadPlace)
   const [sheet, setSheet] = useState(false)
   const [ver, setVer] = useState(0)   // 위치를 바꾸면 아래 카드들을 새로 불러오기
+  const { session, requireLogin } = useAuth()
 
   useEffect(() => {
+    if (!session) return
     (async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
@@ -41,7 +44,7 @@ export default function Home() {
       const { data: b } = await supabase.from('point_balances').select('balance').eq('user_id', user.id).maybeSingle()
       setBalance(b?.balance ?? 0)
     })()
-  }, [])
+  }, [session])
 
   // 이름 없는 위치(현위치 등)는 지역명으로
   useEffect(() => {
@@ -67,10 +70,14 @@ export default function Home() {
             </span>
           </button>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <Link to="/me" className="points">
-              <span style={{ display: 'block', fontSize: 9, fontWeight: 800, color: 'var(--on-dark)' }}>보유 포인트</span>
-              <span className="num" style={{ fontSize: 13, fontWeight: 900, color: '#FBBF24' }}>{balance.toLocaleString()} <small>P</small></span>
-            </Link>
+            {session ? (
+              <Link to="/me" className="points">
+                <span style={{ display: 'block', fontSize: 9, fontWeight: 800, color: 'var(--on-dark)' }}>보유 포인트</span>
+                <span className="num" style={{ fontSize: 13, fontWeight: 900, color: '#FBBF24' }}>{balance.toLocaleString()} <small>P</small></span>
+              </Link>
+            ) : (
+              <button className="points" style={{ cursor: 'pointer', color: '#fff', fontWeight: 900, fontSize: 13, minHeight: 36 }} onClick={() => requireLogin('포인트를 모으려면')}>로그인</button>
+            )}
             <Link to="/settings" className="icon-btn" aria-label="설정"><Icon name="gear" size={16} /></Link>
           </div>
         </div>

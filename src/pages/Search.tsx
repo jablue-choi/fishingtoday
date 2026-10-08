@@ -11,6 +11,9 @@ import SeasonCard from '../components/SeasonCard'
 import FishArt from '../components/FishArt'
 import Icon from '../components/Icon'
 import type { LogRow } from '../lib/records'
+import { Link } from 'react-router-dom'
+import { searchPosts, ago, type Post } from '../lib/community'
+import { useGuardClick } from '../lib/auth'
 
 type Tab = 'search' | 'recommend'
 const SPECIES_HINT = ['우럭', '주꾸미', '갑오징어', '감성돔', '광어', '고등어']
@@ -30,6 +33,8 @@ export default function Search() {
   const [view, setView] = useState<'list' | 'map'>('list')
   const [me] = useState(getLastPos)
   const [sort, setSort] = useState<'score' | 'near'>('score')
+  const [comm, setComm] = useState<Post[] | null>(null)
+  const guard = useGuardClick()
 
   const names = useMemo(() => species.map(s => s.name_ko), [species])
   const speciesReady = useMemo(() => fetchSpecies().then(l => { setSpecies(l); return l.map(s => s.name_ko) }).catch(() => [] as string[]), [])
@@ -41,6 +46,8 @@ export default function Search() {
     try {
       const r = await searchUnified(v, names.length ? names : await speciesReady, async p => (await searchPlaces(p))[0] ?? null)
       setRes(r); setRows(r.rows)
+      setComm(null)
+      searchPosts(r.parsed.species, r.parsed.region).then(setComm).catch(() => setComm([]))
       pushRecent(v); setRecent(getRecent())
     } catch (e) { setErr((e as Error).message) }
     finally { setLoading(false) }
@@ -134,6 +141,26 @@ export default function Search() {
 
       {err && <div className="error">{err}</div>}
       {loading && <div className="empty">찾는 중…</div>}
+
+      {tab === 'search' && !loading && comm && comm.length > 0 && (
+        <div className="card">
+          <div className="card-head">
+            <div className="card-title"><span style={{ color: 'var(--accent)', display: 'inline-flex' }}><Icon name="chat" size={16} /></span>대화방 글</div>
+            <Link to="/community" className="more">대화방<Icon name="chevron" size={12} /></Link>
+          </div>
+          <div className="list">
+            {comm.map(p => (
+              <Link key={p.id} to={`/community/post/${p.id}`} onClick={guard} className="item" style={{ textDecoration: 'none', color: 'var(--ink)' }}>
+                <div style={{ fontSize: 14, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.body}</div>
+                <div className="sub">
+                  {p.tags?.map(t => <span key={t} style={{ color: 'var(--accent-ink)', fontWeight: 700, marginRight: 6 }}>#{t}</span>)}
+                  {p.region ? `${p.region} · ` : ''}{ago(p.created_at)} · 댓글 {p.comment_count}
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       {rows && !loading && (
         rows.length === 0 ? (

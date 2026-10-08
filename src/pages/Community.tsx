@@ -7,6 +7,7 @@ import { regionName } from '../lib/kakaoMap'
 import { regionKey, regionLabel } from '../lib/regionStats'
 import FishArt from '../components/FishArt'
 import Icon from '../components/Icon'
+import { useAuth, useGuardClick } from '../lib/auth'
 
 const roomUrl = (type: string, key: string) => `/community/${type}/${encodeURIComponent(key)}`
 
@@ -16,6 +17,8 @@ export default function Community() {
   const [species, setSpecies] = useState<Species[]>([])
   const [mine, setMine] = useState('')
   const [latest, setLatest] = useState<Post[] | null>(null)
+  const guard = useGuardClick()
+  const { session } = useAuth()
 
   useEffect(() => {
     roomStats().then(setStats)
@@ -37,6 +40,7 @@ export default function Community() {
   return (
     <div className="page">
       <h1>커뮤니티</h1>
+      {!session && <div className="card plain" style={{ fontSize: 13 }}>지금은 글 목록만 보여요. 로그인하면 글·댓글을 보고 질문도 올릴 수 있어요.</div>}
       <div className="choices" style={{ gridTemplateColumns: 'repeat(2, minmax(0,1fr))', marginBottom: 12 }}>
         <Link to="/feed" className="choice" style={{ textDecoration: 'none' }}><Icon name="camera" size={18} />피드 (장비·레시피·영상)</Link>
         <Link to="/places" className="choice" style={{ textDecoration: 'none' }}><Icon name="pin" size={18} />주변 편의시설</Link>
@@ -60,7 +64,7 @@ export default function Community() {
           <div className="card-title" style={{ marginBottom: 8 }}><span className="dot-mark" />방금 올라온 질문</div>
           <div className="list">
             {latest.map(p => (
-              <Link key={p.id} to={`/community/post/${p.id}`} className="item" style={{ textDecoration: 'none', color: 'var(--ink)' }}>
+              <Link key={p.id} to={`/community/post/${p.id}`} onClick={guard} className="item" style={{ textDecoration: 'none', color: 'var(--ink)' }}>
                 <div className="item-row"><span className="badge">{nameOf(p)}</span><span className="sub">{ago(p.created_at)} · 댓글 {p.comment_count}</span></div>
                 <div style={{ fontSize: 14, marginTop: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.body}</div>
               </Link>

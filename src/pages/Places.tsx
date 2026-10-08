@@ -8,6 +8,7 @@ import { hasProfanity, PROFANITY_MSG } from '../lib/profanity'
 import { ago, myUserId } from '../lib/community'
 import PlacesMap from '../components/PlacesMap'
 import Icon from '../components/Icon'
+import { useAuth } from '../lib/auth'
 
 /** 주변 편의시설 지도: 화장실(상태 제보) · 낚시점 · 미끼 · 맛집 (팁 남기기, 제보 +10P) */
 export default function Places() {
@@ -84,16 +85,19 @@ function PlaceDetail({ place, onClose }: { place: Place; onClose: () => void }) 
   const [busy, setBusy] = useState(false)
   const [me, setMe] = useState('')
   const [block, setBlock] = useState<{ blocked: boolean; until: string | null; reason: string | null } | null>(null)
+  const { session, requireLogin } = useAuth()
   const load = () => listNotes(place.type, place.ref).then(setNotes)
-  useEffect(() => { load(); myUserId().then(setMe); myBlockStatus().then(setBlock) }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { load(); myUserId().then(setMe); if (session) myBlockStatus().then(setBlock) }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function send(kind: Note['kind'], body: string | null) {
+    if (!requireLogin(kind === 'tip' ? '팁을 남기려면' : '제보하려면')) return
     setBusy(true); setMsg('')
     try { await addNote(place, kind, body); setTip(''); setMsg(kind === 'tip' ? '팁을 남겼어요. 고마워요!' : '제보했어요. 고마워요!'); load() }
     catch (e) { setMsg((e as Error).message) }
     finally { setBusy(false) }
   }
   async function doReport(n: Note) {
+    if (!requireLogin('신고하려면')) return
     const reason = window.prompt('신고 이유를 짧게 적어 주세요')
     if (reason === null) return
     try { await reportContent('place_note', n.id, reason); setMsg('신고했어요.') } catch (e) { setMsg((e as Error).message) }
@@ -144,7 +148,7 @@ function PlaceDetail({ place, onClose }: { place: Place; onClose: () => void }) 
         ))}
       </div>
       <div className="row" style={{ marginTop: 8 }}>
-        <input value={tip} maxLength={300} onChange={e => setTip(e.target.value)} placeholder={place.type === 'shop' || place.type === 'bait' ? '예: 새벽 4시 오픈, 청갯지렁이 있음' : '이곳에 대한 팁을 남겨 주세요'} aria-label="팁" disabled={block?.blocked} />
+        <input value={tip} maxLength={300} onChange={e => setTip(e.target.value)} onFocus={() => { if (!session) requireLogin('팁을 남기려면') }} placeholder={place.type === 'shop' || place.type === 'bait' ? '예: 새벽 4시 오픈, 청갯지렁이 있음' : '이곳에 대한 팁을 남겨 주세요'} aria-label="팁" disabled={block?.blocked} />
         <button className="btn" style={{ flex: '0 0 auto', width: 'auto', minHeight: 50, padding: '0 16px' }} disabled={busy || tip.trim().length < 2 || bad || block?.blocked} onClick={() => send('tip', tip)}>남기기</button>
       </div>
       {bad && <div className="error" style={{ marginTop: 6 }}>{PROFANITY_MSG}</div>}

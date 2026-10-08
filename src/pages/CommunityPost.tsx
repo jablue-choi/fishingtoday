@@ -5,6 +5,7 @@ import { fetchSpecies, type Species } from '../lib/species'
 import { regionLabel } from '../lib/regionStats'
 import { hasProfanity, PROFANITY_MSG } from '../lib/profanity'
 import { myBlockStatus, blockText } from '../lib/moderation'
+import { useAuth } from '../lib/auth'
 
 /** 질문 하나 + 댓글 */
 export default function CommunityPost() {
@@ -18,7 +19,8 @@ export default function CommunityPost() {
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState('')
   const [block, setBlock] = useState<{ blocked: boolean; until: string | null; reason: string | null } | null>(null)
-  useEffect(() => { myBlockStatus().then(setBlock) }, [])
+  const { session, requireLogin } = useAuth()
+  useEffect(() => { if (session) myBlockStatus().then(setBlock) }, [session])
 
   const loadComments = () => listComments(id).then(setComments).catch(e => setMsg((e as Error).message))
   useEffect(() => {
@@ -34,6 +36,7 @@ export default function CommunityPost() {
   const roomUrl = `/community/${post.room_type}/${encodeURIComponent(post.room_key)}`
 
   async function send() {
+    if (!requireLogin('댓글을 달려면')) return
     if (!body.trim() || busy || hasProfanity(body)) return
     setBusy(true); setMsg('')
     try { await createComment(id, body); setBody(''); await loadComments() }
@@ -41,6 +44,7 @@ export default function CommunityPost() {
     finally { setBusy(false) }
   }
   async function doReport(type: 'post' | 'comment', target: string) {
+    if (!requireLogin('신고하려면')) return
     const reason = window.prompt('신고 이유를 짧게 적어 주세요 (욕설, 광고, 개인정보 등)')
     if (reason === null) return
     try { await report(type, target, reason.slice(0, 200)); setMsg('신고했어요. 3번 쌓이면 자동으로 가려져요.') }
@@ -66,6 +70,11 @@ export default function CommunityPost() {
         </div>
         {post.hidden && <div className="badge warn" style={{ marginTop: 6 }}>신고가 쌓여 가려진 글이에요</div>}
         <div style={{ fontSize: 16, marginTop: 8, whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>{post.body}</div>
+        {post.tags?.length > 0 && (
+          <div className="chips" style={{ marginTop: 8 }}>
+            {post.tags.map(t => <Link key={t} to={`/search?q=${encodeURIComponent(`${post.region ?? ''} ${t}`.trim())}`} className="chip sm" style={{ textDecoration: 'none', background: 'var(--accent-soft)', color: 'var(--accent-ink)' }}>#{t}</Link>)}
+          </div>
+        )}
         <div className="chips" style={{ marginTop: 10, justifyContent: 'flex-end' }}>
           {post.user_id === me ? <button className="chip sm" onClick={removePost}>지우기</button> : <button className="chip sm" onClick={() => doReport('post', post.id)}>신고</button>}
         </div>
@@ -90,7 +99,7 @@ export default function CommunityPost() {
 
       {msg && <div className="card plain" style={{ fontSize: 14 }}>{msg}</div>}
       {block?.blocked ? <div className="card plain error">{blockText(block)}</div> : <div className="card">
-        <textarea value={body} onChange={e => setBody(e.target.value)} maxLength={500} rows={2} placeholder="답변이나 의견을 남겨 주세요" aria-label="댓글"
+        <textarea value={body} onChange={e => setBody(e.target.value)} onFocus={() => { if (!session) requireLogin('댓글을 달려면') }} maxLength={500} rows={2} placeholder="답변이나 의견을 남겨 주세요" aria-label="댓글"
           style={{ width: '100%', padding: 12, border: '1px solid var(--line)', borderRadius: 12, background: 'var(--surface)', color: 'var(--ink)', fontSize: 16, resize: 'vertical' }} />
         {hasProfanity(body) && <div className="error" style={{ marginTop: 6 }}>{PROFANITY_MSG}</div>}
         <div className="item-row" style={{ marginTop: 8 }}>

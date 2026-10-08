@@ -15,7 +15,7 @@
 - 지도·역지오코딩: 카카오맵 JS SDK (libraries=services)
 
 ## 구조
-- `supabase/migrations/` 0001~0024. 스키마 변경은 항상 새 번호 파일로 추가하고 `npm run db:push`
+- `supabase/migrations/` 0001~0027. 스키마 변경은 항상 새 번호 파일로 추가하고 `npm run db:push`
 - `supabase/functions/`
   - `award_points` 포인트·스코어 적립 (클라이언트는 point_ledger에 직접 못 씀)
   - `weather` 기상청 초단기실황 프록시 (KMA_SERVICE_KEY)
@@ -54,6 +54,8 @@
 - 회원 차단(0022 user_blocks, is_blocked): 차단 회원은 대화방·피드·제보·신고·사진 업로드 불가(조과 기록은 가능). 관리자 화면 회원 관리·신고 처리
 - 편의시설(0023): 화장실 toilets(공공데이터, 좌표 없으면 import-toilets.mjs가 카카오 REST로 주소 변환, KAKAO_REST_KEY는 supabase/.env), 낚시점·미끼·맛집은 카카오 장소 검색 + place_notes 팁. 제보 10P(하루 5)
 - 피드(0024): feed_posts(gear/recipe/video), 사진은 공개 버킷 feed-photos(1280px·EXIF 제거), 유튜브는 엣지 함수 video_meta(oEmbed). 글 20P(하루 1). 포인트는 DB 트리거가 award_ledger()로 200P 상한 안에서
+- 비로그인(0025·0026): 홈·검색·커뮤니티/피드 목록만 공개. 글·댓글 보기와 기록·참여는 useAuth().requireLogin / LoginGate로 로그인 유도. anon 정책에서 is_admin 호출 금지
+- 대화방 글 tags(어종 이름, 최대 5)·region_key(0027): 본문에서 detectTags로 자동 태그, 검색 '대화방 글'에 활용
 - 관리자 등록 기록은 출처 필수 + '관리자 등록' 표시. 자랑글 링크는 허용 도메인만(is_allowed_share_url), 기록당 1회 50P
 
 ## 명령
