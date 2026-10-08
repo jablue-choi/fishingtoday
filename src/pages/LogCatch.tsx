@@ -3,11 +3,11 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { getPosition } from '../lib/geo'
 import { fetchKmaNow, type AutoFill } from '../lib/weather'
-import { awardPoints, type AwardResult } from '../lib/points'
+import { awardPoints, reasonLabel, type AwardResult } from '../lib/points'
 import MapPicker from '../components/MapPicker'
 import { regionName } from '../lib/kakaoMap'
 import { saveLastPos } from '../lib/fishingIndex'
-import { fetchRules, checkCatch, closedNow, type Rule } from '../lib/rules'
+import { fetchRules, checkCatch, closedNow, banZonesAt, type Rule } from '../lib/rules'
 import { tideAt } from '../lib/tide'
 
 type Species = { id: number; name_ko: string }
@@ -27,6 +27,7 @@ export default function LogCatch() {
   const [share, setShare] = useState(true)
   const [rules, setRules] = useState<Rule[]>([])
   const [release, setRelease] = useState(false)
+  const [banned, setBanned] = useState(false)
   const [busy, setBusy] = useState(false)
   const [result, setResult] = useState<AwardResult | null>(null)
   const [err, setErr] = useState('')
@@ -39,6 +40,7 @@ export default function LogCatch() {
   }, [])
 
   async function loadWeather(lat: number, lon: number) {
+    banZonesAt(lat, lon).then(z => setBanned(z.length > 0))
     try { setAuto(await fetchKmaNow(lat, lon)) }
     catch { setAuto({ weather: '-', temp_c: null, wind_dir: null, wind_ms: null }) }
   }
@@ -106,7 +108,7 @@ export default function LogCatch() {
     <div className="page">
       <h1>저장됐어요</h1>
       <div className="card"><div className="label" style={{ marginTop: 0 }}>포인트</div><div className="big">+{result.total}</div><div>{result.balance.toLocaleString()}P</div></div>
-      {result.awarded.map(a => <div key={a.reason} className="card" style={{ padding: 10 }}>{a.reason} +{a.amount}P</div>)}
+      {result.awarded.map(a => <div key={a.reason} className="card" style={{ padding: 10 }}>{reasonLabel(a.reason)} +{a.amount}P</div>)}
       {result.capped && <p style={{ color: 'var(--mute)', fontSize: 13 }}>오늘 적립 한도를 채웠어요.</p>}
       <button className="btn" onClick={() => nav('/me')}>내 기록 보기</button>
     </div>
@@ -125,6 +127,13 @@ export default function LogCatch() {
             <div>{new Date().toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })} · {auto?.weather ?? '…'} {auto?.temp_c != null && `${auto.temp_c}°C`}</div>
             <div>{auto?.wind_dir} {auto?.wind_ms != null && `${auto.wind_ms}m/s`} · 물때 {tide ? `${tide.label}${tide.phase ? ` (${tide.phase})` : ''}` : '-'}</div>
           </div>
+          {banned && (
+            <div className="card" style={{ border: '2px solid #D9472B' }}>
+              <b style={{ color: '#D9472B' }}>낚시금지구역 안이에요</b>
+              <div style={{ fontSize: 13 }}>해도에 낚시 제한구역으로 표시된 곳이에요. 낚시를 멈추고 위치를 다시 확인해 주세요.</div>
+              <div style={{ fontSize: 11, color: 'var(--mute)', marginTop: 4 }}>국립해양조사원 전자해도 기준 안내예요. 지자체 낚시통제구역은 현장 안내판을 확인해 주세요.</div>
+            </div>
+          )}
         </>
       )}
       {err && <p style={{ color: '#B8531E' }}>{err}</p>}

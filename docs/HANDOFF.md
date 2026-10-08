@@ -34,8 +34,9 @@
 3. ~~좌표 노출 구멍~~ 완료 (0011: catch_logs 본인만, public_catch_v 소유자 권한 뷰, anon 기록 조회 차단)
 4. 물때: tide_mul은 음력(Intl dangi)으로 계산해 저장 완료 (src/lib/tide.ts, 서해 7물때식·그 외 8물때식, 홈·기록 화면 표시). **남은 것**: 만조·간조 시각(high_tide_at/low_tide_at)은 바다누리 조석 API 연동 필요
 5. 사진 EXIF 검증(exifr): 지금은 업로드만 하면 exif_ok=true
-6. 기록 저장 결과 화면의 적립 사유가 영문 코드(base_log 등)로 보임 → 한글 라벨 (MyRecords의 REASON 맵 재사용)
-7. 공공데이터 CSV 실제 적재(갯바위·선상 포인트, 전국낚시터) 후 홈 "주변 포인트"(rpc spots_near) 노출
+6. ~~적립 사유 한글 라벨~~ 완료 (lib/points.ts reasonLabel)
+7. 포인트 데이터: 갯바위 CSV 1076건 적재 완료(mof_rock, 공간정보 EPSG:5179 → proj4 변환). 바다낚시지수 예보 지점은 fishing_index 함수가 캐시 갱신 때 spots에 동기화(khoa_rock/khoa_boat). 홈 "주변 낚시 포인트" 카드(spots_near). **남은 것**: 선상 CSV(boat), 낚시터.csv는 허가 현황이라 좌표 없음 → 카카오 로컬 REST로 주소 지오코딩 필요(허가 종료 행 제외)
+7-1. 낚시금지구역: 국립해양조사원 전자해도 제한구역 Shapefile 25건 적재(0012, scripts/import-ban-zones.mjs). 기록 화면에서 핀이 구역 안이면 경고. 지자체 낚시통제구역은 미포함
 8. 아이콘 최종 선택 → public/ 교체
 9. Vercel 배포 → 카카오(JS 키 도메인, Redirect), Supabase(URL Configuration)에 배포 주소 추가 → 폰 설치 테스트
 10. 네이버 로그인 (Supabase 기본 provider 아님 → 엣지 함수로 OAuth 처리)

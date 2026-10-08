@@ -15,6 +15,10 @@ import iconv from 'iconv-lite'
 import { parse } from 'csv-parse/sync'
 import dotenv from 'dotenv'
 import { createClient } from '@supabase/supabase-js'
+import proj4 from 'proj4'
+
+// 해수부 포인트 CSV의 '공간정보' 컬럼: POINT (x y), EPSG:5179(UTM-K, GRS80)
+proj4.defs('EPSG:5179', '+proj=tmerc +lat_0=38 +lon_0=127.5 +k=0.9996 +x_0=1000000 +y_0=2000000 +ellps=GRS80 +units=m +no_defs')
 
 dotenv.config({ path: 'supabase/.env' })
 
@@ -43,7 +47,9 @@ const C = {
   region: col('행정구역명', '소재지도로명주소', '소재지지번주소'),
   lat: col('위도'),
   lon: col('경도'),
-  species: col('주요어종', '어종', '주원료'),
+  species: col('주요어종', '어종'),
+  bottom: col('주원료'),          // 해수부 CSV의 '주원료내용'은 어종이 아니라 저질(모래/바위)
+  geomText: cols.find(c => c.replace(/\s/g, '') === '공간정보'),   // '공간정보일련번호'와 구분
   type: col('낚시터유형'),
   depth: col('수심'),
   tide: col('물때'),
@@ -67,6 +73,28 @@ function coord(v) {
 }
 const inKorea = (lat, lon) => lat > 32 && lat < 39.5 && lon > 124 && lon < 132.5
 
+/** 위경도 컬럼이 비었으면 '공간정보' POINT(EPSG:5179)에서 변환 */
+function latLon(r) {
+  const lat = coord(r[C.lat]), lon = coord(r[C.lon])
+  if (inKorea(lat, lon)) return [lat, lon]
+  const m = C.geomText && String(r[C.geomText] ?? '').match(/POINT\s*\(\s*([\d.]+)\s+([\d.]+)\s*\)/i)
+  if (!m) return [NaN, NaN]
+  const [x, y] = proj4('EPSG:5179', 'EPSG:4326', [Number(m[1]), Number(m[2])])
+  return [y, x]
+}
+
+/** '▶감성돔-장대/ 릴찌▶볼락-루어' → '감성돔, 볼락' */
+const speciesFromMethod = (s) => s && s.includes('▶')
+  ? [...new Set(s.split('▶').map(x => x.split('-')[0].trim()).filter(Boolean))].join(', ') || null
+  : null
+
+/** '소바위' + '울산소바위' → '울산소바위' (지역명이 포인트명에 들어 있으면 하나만) */
+function spotName(area, name) {
+  if (!area) return name
+  if (!name) return area
+  return name.includes(area) || area.includes(name) ? (name.length >= area.length ? name : area) : `${area} ${name}`
+}
+
 function spotType(r) {
   if (kind === 'rock') return 'rock'
   if (kind === 'boat') return 'boat'
@@ -79,11 +107,11 @@ function spotType(r) {
 const out = []
 let skipped = 0
 for (const r of rows) {
-  const lat = coord(r[C.lat]), lon = coord(r[C.lon])
+  const [lat, lon] = latLon(r)
   if (!inKorea(lat, lon)) { skipped++; continue }
-  const name = [C.area && kind !== 'ground' ? r[C.area] : null, r[C.name]].filter(Boolean).join(' ')
+  const name = spotName(C.area && kind !== 'ground' ? r[C.area] : null, r[C.name])
   const info = {}
-  for (const k of ['depth', 'tide', 'method', 'fee', 'phone', 'facility', 'type']) if (C[k] && r[C[k]]) info[k] = r[C[k]]
+  for (const k of ['depth', 'tide', 'method', 'fee', 'phone', 'facility', 'type', 'bottom']) if (C[k] && r[C[k]]) info[k] = r[C[k]]
   out.push({
     name: name || '이름 없음',
     geom: `SRID=4326;POINT(${lon.toFixed(6)} ${lat.toFixed(6)})`,
@@ -91,7 +119,7 @@ for (const r of rows) {
     source: SOURCES[kind],
     external_id: (C.id && r[C.id]) || `${name}|${lat.toFixed(5)},${lon.toFixed(5)}`,
     region: (C.region && r[C.region]) || null,
-    species_text: (C.species && r[C.species]) || null,
+    species_text: (C.species && r[C.species]) || speciesFromMethod(C.method && r[C.method]),
     info,
   })
 }

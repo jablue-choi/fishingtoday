@@ -56,6 +56,12 @@ export function checkCatch(rules: Rule[], speciesId: number, sizeCm: number | nu
   return out
 }
 
+/** 위치가 낚시금지구역(해도 제한구역) 안인지. 조회 실패 시 빈 배열 */
+export async function banZonesAt(lat: number, lon: number): Promise<{ id: number; name: string | null }[]> {
+  const { data, error } = await supabase.rpc('ban_zones_at', { p_lat: lat, p_lon: lon, p_m: 0 })
+  return error ? [] : (data ?? [])
+}
+
 /** 어종 칩 옆 표시용: 지금 금어기인 어종 id */
 export function closedNow(rules: Rule[]): Set<number> {
   return new Set(rules.filter(r => r.rule_type === 'season' && inPeriod(r)).map(r => r.species_id))

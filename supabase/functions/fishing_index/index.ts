@@ -63,6 +63,7 @@ Deno.serve(async (req) => {
       } else {
         items = fetched.items; fetched_at = new Date().toISOString()
         await db.from('fishing_index_cache').upsert({ gubun, fetched_at, items })
+        if (gubun === '갯바위' || gubun === '선상') await syncSpots(db, gubun, items)
       }
     }
 
@@ -128,6 +129,27 @@ async function fetchIndex(gubun: string): Promise<{ items: FishingIndex[] } | { 
     items = [...worst.values()]
   }
   return { items: items.filter(i => !isNaN(i.lat) && !isNaN(i.lon)) }
+}
+
+/** 지수 예보 지점을 spots에도 저장 (홈 '주변 포인트'용). 실패해도 지수 응답에는 영향 없음 */
+async function syncSpots(db: any, gubun: string, items: FishingIndex[]) {
+  const byName = new Map<string, { lat: number; lon: number; fish: Set<string> }>()
+  for (const i of items) {
+    if (!i.name) continue
+    const s = byName.get(i.name) ?? { lat: i.lat, lon: i.lon, fish: new Set<string>() }
+    if (i.fish) s.fish.add(i.fish)
+    byName.set(i.name, s)
+  }
+  const rows = [...byName].map(([name, s]) => ({
+    name,
+    geom: `SRID=4326;POINT(${s.lon} ${s.lat})`,
+    spot_type: gubun === '갯바위' ? 'rock' : 'boat',
+    source: gubun === '갯바위' ? 'khoa_rock' : 'khoa_boat',
+    external_id: name,
+    species_text: [...s.fish].join(', ') || null,
+  }))
+  const { error } = await db.from('spots').upsert(rows, { onConflict: 'source,external_id' })
+  if (error) console.error('spots sync failed', error.message)
 }
 
 function pickItems(b: any): any[] | null {

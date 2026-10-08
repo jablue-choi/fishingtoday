@@ -5,6 +5,7 @@ import SearchBar from '../components/SearchBar'
 import FishingIndexCard from '../components/FishingIndexCard'
 import ClosedSeasonCard from '../components/ClosedSeasonCard'
 import SeasonCard from '../components/SeasonCard'
+import NearbySpotsCard from '../components/NearbySpotsCard'
 import { getLastPos } from '../lib/fishingIndex'
 import { tideAt } from '../lib/tide'
 
@@ -37,6 +38,7 @@ export default function Home() {
         </div>
       )}
       <FishingIndexCard />
+      <NearbySpotsCard />
       <SeasonCard />
       <ClosedSeasonCard />
       <Link to="/log" className="btn" style={{ textAlign: 'center', textDecoration: 'none' }}>현위치 찍고 기록 시작</Link>

@@ -11,7 +11,8 @@
     "db:push": "supabase db push",
     "fn:serve": "supabase functions serve award_points --env-file supabase/.env",
     "fn:deploy": "supabase functions deploy award_points",
-    "import:spots": "node scripts/import-spots.mjs"
+    "import:spots": "node scripts/import-spots.mjs",
+    "import:ban-zones": "node scripts/import-ban-zones.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.0",
@@ -28,6 +29,7 @@
     "dotenv": "^18.0.6",
     "iconv-lite": "^0.7.3",
     "oxlint": "^1.81.0",
+    "proj4": "^2.22.0",
     "typescript": "~6.0.2",
     "vite": "^8.3.0",
     "vite-plugin-pwa": "^1.0.0"

@@ -2,12 +2,9 @@ import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { fetchMyLogs, buildReport, type LogRow, type Period } from '../lib/records'
 import HistoryMap from '../components/HistoryMap'
+import { reasonLabel } from '../lib/points'
 
 type Tab = 'report' | 'map' | 'list'
-const REASON: Record<string, string> = {
-  base_log: '기록', photo_verified: '사진 인증', first_visit: '첫 방문',
-  release: '방생', zero_log: '꽝 기록', admin: '관리자',
-}
 
 export default function MyRecords() {
   const [tab, setTab] = useState<Tab>('report')
@@ -141,7 +138,7 @@ function ReportView({ rep, balance, score, ledger }: {
       {ledger.length === 0 && <div style={{ color: 'var(--mute)', fontSize: 13 }}>아직 적립 내역이 없어요</div>}
       {ledger.map((l, i) => (
         <div key={i} className="kv">
-          <span>{new Date(l.created_at).toLocaleDateString('ko-KR')} {REASON[l.reason] ?? l.reason}</span>
+          <span>{new Date(l.created_at).toLocaleDateString('ko-KR')} {reasonLabel(l.reason)}</span>
           <b>{l.amount > 0 ? '+' : ''}{l.amount}P</b>
         </div>
       ))}
