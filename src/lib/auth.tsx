@@ -28,7 +28,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [why, setWhy] = useState<string | null>(null)
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => { setSession(data.session); setReady(true) })
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session); setReady(true)
+      // 카톡 인앱에서 넘어온 경우(?login=kakao): 표시를 지우고 로그인 안 돼 있으면 바로 카카오 로그인
+      const url = new URL(window.location.href)
+      if (url.searchParams.get('login') !== 'kakao') return
+      url.searchParams.delete('login')
+      window.history.replaceState(window.history.state, '', url.href)
+      if (!data.session && !/KAKAOTALK/i.test(navigator.userAgent)) signInWithKakao(url.href)   // 인앱 그대로면 반복 방지
+    })
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s))
     return () => sub.subscription.unsubscribe()
   }, [])
