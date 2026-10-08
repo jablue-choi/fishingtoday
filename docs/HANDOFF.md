@@ -31,7 +31,7 @@
 - 욕설 금지(0021), 회원 차단·관리자 회원/신고 관리(0022), 주변 편의시설 화장실·낚시점·미끼·맛집 + 제보 포인트(0023), 피드 장비·레시피·유튜브(0024)
 - 화장실 데이터: data.go.kr 표준데이터 CSV에 좌표가 없어 카카오 REST로 주소 변환 적재 중(해안 지역 먼저). `npm run import:toilets -- data/공중화장실정보.csv --only ...` 다시 실행하면 이어서
 
-## 2026-10-09 추가 완료 (0028~0032, 전부 원격 적용·배포)
+## 2026-10-09 추가 완료 (0028~0033, 전부 원격 적용·배포)
 - **카카오 로그인 리다이렉트**: 카톡 링크로 열면 'Vercel 로그인' 화면이 뜨던 문제 해결(사용자 확인).
   - 원인: Supabase Site URL이 보호 걸린 `https://fishingtoday-153lab.vercel.app/`이고 Redirect URLs의 운영 주소는 `https://fishingtoday.vercel.app`(끝 '/' 없이)뿐 → 하위 경로·끝 '/' 주소는 Site URL로 떨어짐
   - 수정(src/lib/supabase.ts, auth.tsx): redirectTo는 `window.location.origin` 고정, 보던 경로는 localStorage `login_return`(10분)에 저장 후 로그인 뒤 이동. 해시·이전 오류 파라미터 제거. 카톡 인앱 브라우저는 `kakaotalk://web/openExternal`로 외부 브라우저에서 열고 `?login=kakao`로 로그인 이어가기
@@ -41,6 +41,7 @@
   - `extrSe`는 그날 순번이라 만조·간조는 앞뒤 조위로 판정. 지점·날짜별 24시간 캐시(fishing_index_cache, gubun `조석:코드:날짜`)
   - 홈 TideHero 만조·간조·곡선(고·저조 코사인 보간)과 기록 high_tide_at/low_tide_at 스냅샷. 40km 밖·실패 시 Open-Meteo로 대체
   - 바다타임과 −25분 차이 나던 건 Open-Meteo 모델값 때문. 바다타임 데이터 직접 수집은 규칙(크롤링 금지)상 하지 않음
+- **관리자 등록 만조·간조(0033)**: admin_add_catch에 p_high_tide_at/p_low_tide_at(기본 null) 추가, Admin.tsx가 조석예보로 채움. 실제 관리자 등록 테스트는 아직
 - **일출·일몰**: src/lib/sun.ts(SunCalc 방식 계산, API 없음, 오차 1분 안팎), 홈 물때 카드에 표시
 - **제철 어종 보강(0028)**: 수산자원공단 낚시어선 어획량 조사(갈치 3년 연속 1위)·해경 낚시어선 주어업지 CSV 집계 기준. 새 어종 10종(갈치·방어·부시리·한치·가자미·도다리·열기·임연수어·민어·대문어, FishArt 그림 포함), species_seasons 31→58건. 방법·미끼·팁은 공식 근거 약함 → 문구 검수 필요. 뺀 어종: 보구치·꼴뚜기·다금바리·빙어(근거 약함), 황돔은 참돔으로 봄
 - **금어기·금지체장 법령 대조(0029~0032)**: 국가법령정보센터 시행령 원문(2026.7.1 시행, 별표1 개정 2026.6.23·별표2 개정 2024.6.4)과 대조. 규칙 32건
