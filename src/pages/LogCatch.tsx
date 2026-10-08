@@ -10,7 +10,7 @@ import { saveLastPos, getLastPos } from '../lib/fishingIndex'
 import { fetchPastWeather, PAST_WEATHER_SOURCE } from '../lib/pastWeather'
 import { pulse } from '../lib/pulse'
 import DateTimeField, { toLocalInput } from '../components/DateTimeField'
-import { fetchRules, checkCatch, closedNow, banZonesAt, type Rule } from '../lib/rules'
+import { fetchRules, checkCatch, closedNow, banZonesAt, otherMeasureRule, type Rule } from '../lib/rules'
 import { tideAt, fetchTideTable, nearestTideTimes } from '../lib/tide'
 import { identifyFish, CONFIDENCE_LABEL, type FishId } from '../lib/fishId'
 import { fetchSpecies, type Species } from '../lib/species'
@@ -62,6 +62,7 @@ export default function LogCatch() {
   const [methods, setMethods] = useState<Code[]>([])
   const [baits, setBaits] = useState<Code[]>([])
   const [form, setForm] = useState({ species_id: 0, size_cm: '', count: 1, method_code: '', bait_code: '' })
+  const [measureCm, setMeasureCm] = useState('')   // 갈치 항문장 등 전장이 아닌 금지체장 확인용 (저장 안 함)
   const [share, setShare] = useState(true)
   const [rules, setRules] = useState<Rule[]>([])
   const [release, setRelease] = useState(false)
@@ -126,7 +127,7 @@ export default function LogCatch() {
 
   /* ── 무엇을 ── */
   function pickSpecies(id: number) {
-    setForm(f => ({ ...f, species_id: id })); setZero(false); setRelease(false)
+    setForm(f => ({ ...f, species_id: id })); setZero(false); setRelease(false); setMeasureCm('')
     window.setTimeout(() => go('detail'), 250)   // 고르면 바로 다음 질문
   }
   function answerZero() { setZero(true); setForm(f => ({ ...f, species_id: 0 })); go('detail') }
@@ -182,7 +183,8 @@ export default function LogCatch() {
   }
 
   const picked = species.find(s => s.id === form.species_id)
-  const checks = !zero && form.species_id ? checkCatch(rules, form.species_id, form.size_cm ? Number(form.size_cm) : null, at) : []
+  const otherRule = !zero && form.species_id ? otherMeasureRule(rules, form.species_id) : undefined
+  const checks = !zero && form.species_id ? checkCatch(rules, form.species_id, form.size_cm ? Number(form.size_cm) : null, at, otherRule && measureCm ? Number(measureCm) : null) : []
   const mustRelease = checks.some(c => c.level === 'ban' || c.level === 'size')
   const closedIds = closedNow(rules, at)
   const tide = pos ? tideAt(pos, at) : null
@@ -326,6 +328,10 @@ export default function LogCatch() {
 
               <div className="label">가장 큰 녀석 크기 (cm, 선택)</div>
               <input type="number" inputMode="decimal" placeholder="예: 32" value={form.size_cm} onChange={e => setForm(f => ({ ...f, size_cm: e.target.value }))} />
+              {otherRule && <>
+                <div className="label">{otherRule.measure} (cm, 금지체장 확인용){otherRule.note ? <span className="sub"> {otherRule.note}</span> : null}</div>
+                <input type="number" inputMode="decimal" placeholder={`금지체장 ${otherRule.min_size_cm}cm`} value={measureCm} onChange={e => setMeasureCm(e.target.value)} aria-label={otherRule.measure ?? '길이'} />
+              </>}
 
               {checks.length > 0 && (
                 <div className="card plain" style={{ marginTop: 10, borderColor: mustRelease ? 'var(--danger)' : 'var(--warn)' }}>

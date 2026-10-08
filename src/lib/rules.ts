@@ -40,8 +40,16 @@ export function startsWithin(r: Rule, days: number) {
 
 export type Check = { level: 'ban' | 'size' | 'info'; title: string; detail: string }
 
-/** 어종·사이즈 입력값으로 경고 만들기 */
-export function checkCatch(rules: Rule[], speciesId: number, sizeCm: number | null, at?: Date): Check[] {
+/** 금지체장이 전장이 아닌 다른 길이 기준인 규칙 (갈치 항문장, 살오징어 외투장) */
+export function otherMeasureRule(rules: Rule[], speciesId: number): Rule | undefined {
+  return rules.find(r => r.species_id === speciesId && r.rule_type === 'min_size' && r.min_size_cm != null && !!r.measure && r.measure !== '전장')
+}
+
+/**
+ * 어종·사이즈 입력값으로 경고 만들기
+ * sizeCm은 전장(저장값). 전장이 아닌 기준의 규칙은 measureCm(그 기준으로 잰 길이)으로만 판정하고, 없으면 안내만
+ */
+export function checkCatch(rules: Rule[], speciesId: number, sizeCm: number | null, at?: Date, measureCm: number | null = null): Check[] {
   const mine = rules.filter(r => r.species_id === speciesId)
   const d = at ? new Date(at.getTime() + 9 * 3600e3) : kstToday()
   const past = !!at && Date.now() - at.getTime() > 864e5
@@ -54,8 +62,14 @@ export function checkCatch(rules: Rule[], speciesId: number, sizeCm: number | nu
     if (r.rule_type === 'notice' && inPeriod(r, d))
       out.push({ level: 'info', title: `금어기 고시 기간이에요 (${period(r)} 중 1개월)`, detail: '올해 고시된 금어기인지 확인해 주세요.' })
     // 법령은 'n cm 이하' 포획 금지 → 경계값 포함
-    if (r.rule_type === 'min_size' && r.min_size_cm != null && sizeCm != null && sizeCm <= r.min_size_cm)
-      out.push({ level: 'size', title: `금지체장 ${r.min_size_cm}cm 이하예요`, detail: `${r.measure ?? '전장'} 기준 ${r.min_size_cm}cm 이하면 방생해야 해요.` })
+    if (r.rule_type === 'min_size' && r.min_size_cm != null) {
+      const other = !!r.measure && r.measure !== '전장'
+      const v = other ? measureCm : sizeCm
+      if (v != null && v <= r.min_size_cm)
+        out.push({ level: 'size', title: `금지체장 ${r.min_size_cm}cm 이하예요`, detail: `${r.measure ?? '전장'} 기준 ${r.min_size_cm}cm 이하면 방생해야 해요.` })
+      else if (other && v == null)
+        out.push({ level: 'info', title: `금지체장은 ${r.measure} ${r.min_size_cm}cm예요`, detail: `${r.measure}${r.note ? `(${r.note})` : ''}이 ${r.min_size_cm}cm 이하면 방생해야 해요. 재 보셨다면 아래에 적어 주세요.` })
+    }
     if (r.rule_type === 'min_weight' && r.min_weight_g != null)
       out.push({ level: 'info', title: `금지체중 ${r.min_weight_g}g`, detail: `${r.min_weight_g}g 이하는 방생해야 해요.` })
   }
