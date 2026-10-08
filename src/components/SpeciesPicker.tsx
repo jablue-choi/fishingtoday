@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import FishArt from './FishArt'
 import { addSpecies, type Species } from '../lib/species'
+import { hasProfanity } from '../lib/profanity'
 
 /**
  * 어종 고르기: 그림 + 이름 칩. 목록에 없으면 '어종 추가'로 정식 코드를 만들어 바로 선택.
@@ -22,6 +23,7 @@ export default function SpeciesPicker({ species, value, onChange, onAdded, close
 
   async function add() {
     if (!name.trim() || busy) return
+    if (hasProfanity(name)) { setErr('쓸 수 없는 어종 이름이에요.'); return }
     setBusy(true); setErr('')
     try {
       const s = await addSpecies(name, water)

@@ -11,6 +11,8 @@ import type { AutoFill } from '../lib/weather'
 import { fetchSpecies, type Species } from '../lib/species'
 import SpeciesPicker from '../components/SpeciesPicker'
 import DateTimeField, { toLocalInput } from '../components/DateTimeField'
+import AdminMembers from '../components/AdminMembers'
+import AdminReports from '../components/AdminReports'
 
 type Code = { code: string; label: string }
 type Row = { id: string; caught_at: string; region: string | null; species_name: string | null; count: number; log_type: string; source_type: string | null; source_name: string | null }
@@ -20,6 +22,7 @@ const EMPTY = { log_type: 'catch', species_id: 0, size_cm: '', count: 1, method_
 /** 관리자: 조과 수동 등록 (출처 필수, 화면에 '관리자 등록'으로 표시, 포인트 없음) */
 export default function Admin() {
   const [ok, setOk] = useState<boolean | null>(null)
+  const [tab, setTab] = useState<'catch' | 'members' | 'reports'>('catch')
   const [start] = useState(() => getLastPos() ?? { lat: 37.25, lon: 126.58 })
   const [pos, setPos] = useState(start)
   const [whenStr, setWhenStr] = useState(() => toLocalInput(new Date()))
@@ -94,9 +97,22 @@ export default function Admin() {
 
   const tide = whenOk ? tideAt(pos, when) : null
 
+  const tabs = (
+    <>
+      <h1>관리자</h1>
+      <div className="chips" style={{ marginBottom: 12 }}>
+        {([['catch', '조과 등록'], ['members', '회원 관리'], ['reports', '신고 처리']] as const).map(([k, l]) => (
+          <button key={k} className={`chip ${tab === k ? 'on' : ''}`} onClick={() => setTab(k)}>{l}</button>
+        ))}
+      </div>
+    </>
+  )
+  if (tab === 'members') return <div className="page">{tabs}<AdminMembers /></div>
+  if (tab === 'reports') return <div className="page">{tabs}<AdminReports /></div>
+
   return (
     <div className="page">
-      <h1>관리자 조과 등록</h1>
+      {tabs}
       <div className="card plain" style={{ fontSize: 13 }}>
         등록한 기록은 검색·추천에 <span className="badge ink">관리자 등록</span> 표시와 출처가 함께 보여요. 포인트·스코어는 쌓이지 않아요.
         <div className="note">출처의 글·사진을 옮기지 말고 조황 사실(날짜·장소·어종·마릿수)만 적어 주세요. 커뮤니티 글은 출처로 쓰지 않아요.</div>

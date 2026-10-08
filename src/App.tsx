@@ -15,6 +15,10 @@ import RecordEdit from './pages/RecordEdit'
 import Community from './pages/Community'
 import CommunityRoom from './pages/CommunityRoom'
 import CommunityPost from './pages/CommunityPost'
+import Feed from './pages/Feed'
+import FeedNew from './pages/FeedNew'
+import FeedPost from './pages/FeedPost'
+import Places from './pages/Places'
 import { fetchMyProfile } from './lib/profile'
 
 export default function App() {
@@ -51,6 +55,10 @@ export default function App() {
         <Route path="/settings" element={<Settings />} />
         <Route path="/ranking" element={<Ranking />} />
         <Route path="/community" element={<Community />} />
+        <Route path="/feed" element={<Feed />} />
+        <Route path="/feed/new" element={<FeedNew />} />
+        <Route path="/feed/:id" element={<FeedPost />} />
+        <Route path="/places" element={<Places />} />
         <Route path="/community/post/:id" element={<CommunityPost />} />
         <Route path="/community/:type/:key" element={<CommunityRoom />} />
         <Route path="/admin" element={<Admin />} />
@@ -59,7 +67,7 @@ export default function App() {
         <NavLink to="/" end className={({ isActive }) => (isActive ? 'on' : '')}><Icon name="home" size={20} />홈</NavLink>
         <NavLink to="/search" className={({ isActive }) => (isActive ? 'on' : '')}><Icon name="search" size={20} />검색</NavLink>
         <NavLink to="/log" className="rec" aria-label="조과 기록하기"><span className="rec-btn"><Icon name="camera" size={22} /></span>기록하기</NavLink>
-        <NavLink to="/community" className={({ isActive }) => (isActive ? 'on' : '')}><Icon name="chat" size={20} />대화방</NavLink>
+        <NavLink to="/community" className={({ isActive }) => (isActive ? 'on' : '')}><Icon name="chat" size={20} />커뮤니티</NavLink>
         <NavLink to="/me" className={({ isActive }) => (isActive ? 'on' : '')}><Icon name="user" size={20} />내 기록</NavLink>
       </nav>
     </>

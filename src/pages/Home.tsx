@@ -11,6 +11,7 @@ import RankingCard from '../components/RankingCard'
 import RegionFishCard from '../components/RegionFishCard'
 import LocalIndex from '../components/LocalIndex'
 import CommunityCard from '../components/CommunityCard'
+import NearbyFacilities from '../components/NearbyFacilities'
 import { getPosition } from '../lib/geo'
 import { regionKey, regionLabel } from '../lib/regionStats'
 import TideHero from '../components/TideHero'
@@ -79,6 +80,7 @@ export default function Home() {
         onUseGps={async () => { const g = await getPosition(); pick({ lat: g.coords.latitude, lon: g.coords.longitude }, '') }} />
       {pos && <LocalIndex key={`l${ver}`} pos={pos} title={`${place ? regionLabel(regionKey(place)) || place : '이 지역'} 오늘 바다낚시지수`} />}
       <HourlyForecast pos={pos} />
+      <NearbyFacilities />
       <RankingCard />
       <RegionFishCard key={`r${ver}`} compact />
       <CommunityCard />

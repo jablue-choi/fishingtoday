@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { friendlyError } from './moderation'
 
 export type RoomType = 'today' | 'species' | 'region'
 export type Post = {
@@ -45,13 +46,13 @@ export async function listComments(postId: string): Promise<Comment[]> {
 
 export async function createPost(type: RoomType, key: string, body: string, region: string | null) {
   const { data, error } = await supabase.from('community_posts').insert({ room_type: type, room_key: key, body: body.trim(), region }).select('id').single()
-  if (error) throw new Error(error.message.includes('하루') ? error.message : '글을 올리지 못했어요. 2자 이상 1,000자 이하로 써 주세요.')
+  if (error) throw new Error(friendlyError(error, '글을 올리지 못했어요. 2자 이상 1,000자 이하로 써 주세요.'))
   return data.id as string
 }
 
 export async function createComment(postId: string, body: string) {
   const { error } = await supabase.from('community_comments').insert({ post_id: postId, body: body.trim() })
-  if (error) throw new Error(error.message.includes('하루') ? error.message : '댓글을 달지 못했어요.')
+  if (error) throw new Error(friendlyError(error, '댓글을 달지 못했어요.'))
 }
 
 export async function deletePost(id: string) { const { error } = await supabase.from('community_posts').delete().eq('id', id); if (error) throw new Error('지우지 못했어요.') }

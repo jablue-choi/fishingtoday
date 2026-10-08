@@ -3,6 +3,8 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { getPost, listComments, createComment, deletePost, deleteComment, report, myUserId, ago, type Post, type Comment } from '../lib/community'
 import { fetchSpecies, type Species } from '../lib/species'
 import { regionLabel } from '../lib/regionStats'
+import { hasProfanity, PROFANITY_MSG } from '../lib/profanity'
+import { myBlockStatus, blockText } from '../lib/moderation'
 
 /** 질문 하나 + 댓글 */
 export default function CommunityPost() {
@@ -15,6 +17,8 @@ export default function CommunityPost() {
   const [body, setBody] = useState('')
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState('')
+  const [block, setBlock] = useState<{ blocked: boolean; until: string | null; reason: string | null } | null>(null)
+  useEffect(() => { myBlockStatus().then(setBlock) }, [])
 
   const loadComments = () => listComments(id).then(setComments).catch(e => setMsg((e as Error).message))
   useEffect(() => {
@@ -30,7 +34,7 @@ export default function CommunityPost() {
   const roomUrl = `/community/${post.room_type}/${encodeURIComponent(post.room_key)}`
 
   async function send() {
-    if (!body.trim() || busy) return
+    if (!body.trim() || busy || hasProfanity(body)) return
     setBusy(true); setMsg('')
     try { await createComment(id, body); setBody(''); await loadComments() }
     catch (e) { setMsg((e as Error).message) }
@@ -85,14 +89,15 @@ export default function CommunityPost() {
       </div>
 
       {msg && <div className="card plain" style={{ fontSize: 14 }}>{msg}</div>}
-      <div className="card">
+      {block?.blocked ? <div className="card plain error">{blockText(block)}</div> : <div className="card">
         <textarea value={body} onChange={e => setBody(e.target.value)} maxLength={500} rows={2} placeholder="답변이나 의견을 남겨 주세요" aria-label="댓글"
           style={{ width: '100%', padding: 12, border: '1px solid var(--line)', borderRadius: 12, background: 'var(--surface)', color: 'var(--ink)', fontSize: 16, resize: 'vertical' }} />
+        {hasProfanity(body) && <div className="error" style={{ marginTop: 6 }}>{PROFANITY_MSG}</div>}
         <div className="item-row" style={{ marginTop: 8 }}>
-          <span className="sub">{body.length}/500</span>
-          <button className="btn" style={{ width: 'auto', minHeight: 44, padding: '0 18px' }} disabled={!body.trim() || busy} onClick={send}>{busy ? '다는 중…' : '댓글 달기'}</button>
+          <span className="sub">{body.length}/500 · 욕설·비하 표현은 달 수 없어요</span>
+          <button className="btn" style={{ width: 'auto', minHeight: 44, padding: '0 18px' }} disabled={!body.trim() || busy || hasProfanity(body)} onClick={send}>{busy ? '다는 중…' : '댓글 달기'}</button>
         </div>
-      </div>
+      </div>}
     </div>
   )
 }

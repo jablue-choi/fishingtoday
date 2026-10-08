@@ -12,7 +12,8 @@
     "fn:serve": "supabase functions serve award_points --env-file supabase/.env",
     "fn:deploy": "supabase functions deploy award_points",
     "import:spots": "node scripts/import-spots.mjs",
-    "import:ban-zones": "node scripts/import-ban-zones.mjs"
+    "import:ban-zones": "node scripts/import-ban-zones.mjs",
+    "import:toilets": "node scripts/import-toilets.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.0",

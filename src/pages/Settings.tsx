@@ -31,7 +31,7 @@ export default function Settings() {
       </div>
 
       {admin && (
-        <Link to="/admin" className="btn dark" style={{ marginBottom: 12 }}>관리자: 조과 등록·관리</Link>
+        <Link to="/admin" className="btn dark" style={{ marginBottom: 12 }}>관리자: 조과 등록 · 회원 · 신고</Link>
       )}
 
       <button className="btn ghost" onClick={() => signOut()}>로그아웃</button>

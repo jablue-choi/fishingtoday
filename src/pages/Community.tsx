@@ -36,7 +36,11 @@ export default function Community() {
 
   return (
     <div className="page">
-      <h1>대화방</h1>
+      <h1>커뮤니티</h1>
+      <div className="choices" style={{ gridTemplateColumns: 'repeat(2, minmax(0,1fr))', marginBottom: 12 }}>
+        <Link to="/feed" className="choice" style={{ textDecoration: 'none' }}><Icon name="camera" size={18} />피드 (장비·레시피·영상)</Link>
+        <Link to="/places" className="choice" style={{ textDecoration: 'none' }}><Icon name="pin" size={18} />주변 편의시설</Link>
+      </div>
 
       <Link to={roomUrl('today', 'today')} className="card dark" style={{ display: 'block', textDecoration: 'none' }}>
         <div className="glow" />
@@ -97,7 +101,7 @@ export default function Community() {
         </div>
       </div>
 
-      <div className="note">서로 존중해 주세요. 욕설·광고·개인정보는 신고해 주세요. 신고가 3번 쌓이면 자동으로 가려져요. 정확한 포인트 좌표 대신 지역 이름으로 이야기해 주세요.</div>
+      <div className="note">욕설·비하 표현은 올릴 수 없어요. 서로 존중해 주세요. 광고·개인정보는 신고해 주세요. 신고가 3번 쌓이면 자동으로 가려져요. 정확한 포인트 좌표 대신 지역 이름으로 이야기해 주세요.</div>
     </div>
   )
 }
