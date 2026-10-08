@@ -25,7 +25,8 @@ export async function signInWithKakao(returnTo: string = window.location.href) {
   // 카카오에서 돌아오는 주소는 항상 홈(Redirect URLs에 확실히 있는 주소). 보던 화면은 저장했다가 AuthProvider가 로그인 후 이동
   const back = new URL(target)
   try { localStorage.setItem(RETURN_KEY, JSON.stringify({ path: back.pathname + back.search, at: Date.now() })) } catch { /* 저장 못 하면 홈으로 */ }
-  await supabase.auth.signInWithOAuth({ provider: 'kakao', options: { redirectTo: `${window.location.origin}/` } })
+  // 끝에 '/' 붙이면 Redirect URLs의 'https://fishingtoday.vercel.app'과 안 맞아 Site URL로 가 버림 → origin 그대로
+  await supabase.auth.signInWithOAuth({ provider: 'kakao', options: { redirectTo: window.location.origin } })
 }
 
 const RETURN_KEY = 'login_return'
