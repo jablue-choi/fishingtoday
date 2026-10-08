@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
-import { supabase, signInWithKakao } from './supabase'
+import { useNavigate } from 'react-router-dom'
+import { supabase, signInWithKakao, takeLoginReturn } from './supabase'
 
 /*
  * 로그인 상태 + '로그인이 필요해요' 시트
@@ -26,10 +27,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [ready, setReady] = useState(false)
   const [why, setWhy] = useState<string | null>(null)
+  const navigate = useNavigate()
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session); setReady(true)
+      // 카카오 로그인에서 홈으로 돌아온 경우: 로그인 전에 보던 화면으로
+      if (data.session) {
+        const back = takeLoginReturn()
+        if (back && back !== window.location.pathname + window.location.search) navigate(back, { replace: true })
+      }
       // 카톡 인앱에서 넘어온 경우(?login=kakao): 표시를 지우고 로그인 안 돼 있으면 바로 카카오 로그인
       const url = new URL(window.location.href)
       if (url.searchParams.get('login') !== 'kakao') return

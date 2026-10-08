@@ -7,7 +7,7 @@ export const supabase = createClient(
 
 /**
  * 카카오 로그인 (Supabase 기본 provider). 네이버는 2단계에서 엣지 함수로 붙인다.
- * 로그인 후 보던 화면으로 돌아오게 지금 주소로 되돌림 (Supabase Redirect URLs에 '<도메인>/**' 필요)
+ * 로그인 후 보던 화면으로 돌아오게 경로를 저장해 두고, 카카오에서는 홈으로 돌아옴 (Supabase Site URL·Redirect URLs에 운영 도메인 필요)
  */
 export async function signInWithKakao(returnTo: string = window.location.href) {
   const url = new URL(returnTo, window.location.origin)
@@ -22,7 +22,23 @@ export async function signInWithKakao(returnTo: string = window.location.href) {
     window.location.href = `kakaotalk://web/openExternal?url=${encodeURIComponent(ext.href)}`
     return
   }
-  await supabase.auth.signInWithOAuth({ provider: 'kakao', options: { redirectTo: target } })
+  // 카카오에서 돌아오는 주소는 항상 홈(Redirect URLs에 확실히 있는 주소). 보던 화면은 저장했다가 AuthProvider가 로그인 후 이동
+  const back = new URL(target)
+  try { localStorage.setItem(RETURN_KEY, JSON.stringify({ path: back.pathname + back.search, at: Date.now() })) } catch { /* 저장 못 하면 홈으로 */ }
+  await supabase.auth.signInWithOAuth({ provider: 'kakao', options: { redirectTo: `${window.location.origin}/` } })
+}
+
+const RETURN_KEY = 'login_return'
+
+/** 로그인 전에 보던 경로 (10분 안에 저장된 것만, 한 번 꺼내면 지움) */
+export function takeLoginReturn(): string | null {
+  try {
+    const raw = localStorage.getItem(RETURN_KEY)
+    localStorage.removeItem(RETURN_KEY)
+    const v = raw ? JSON.parse(raw) as { path?: string; at?: number } : null
+    if (!v?.path?.startsWith('/') || v.path.startsWith('//') || Date.now() - (v.at ?? 0) > 10 * 60e3) return null
+    return v.path
+  } catch { return null }
 }
 
 export function signOut() {
