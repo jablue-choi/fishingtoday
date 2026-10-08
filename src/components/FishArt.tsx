@@ -47,6 +47,17 @@ const SPECS: Record<string, Spec> = {
   cuttlefish:         { shape: 'cuttle', body: '#8A7660', belly: '#B9A68E', mark: '#5B4C3B' },
   bigfin_reef_squid:  { shape: 'bigfin', body: '#C8A9A0', belly: '#E7D6D0', mark: '#9B7468' },
   common_squid:       { shape: 'squid', body: '#C77D5E', belly: '#E3B49E', mark: '#9E583D' },
+  // 0028 추가 어종
+  hairtail:           { shape: 'fish', h: 6, len: 100, body: '#C9D3DA', belly: '#EEF2F4', fin: '#AEBBC4', dorsal: 'smooth', tail: 'straight', bigMouth: true },
+  yellowtail:         { shape: 'fish', h: 16, len: 90, body: '#3F6E8C', belly: '#E9EEF1', fin: '#D9B84A', dorsal: 'double', tail: 'deep', stripe: { color: '#D9B84A' } },
+  goldstriped_amberjack: { shape: 'fish', h: 16, len: 92, body: '#5C7F93', belly: '#ECF0F2', fin: '#E0C25A', dorsal: 'smooth', tail: 'deep', stripe: { color: '#E0C25A' } },
+  goldeye_rockfish:   { shape: 'fish', h: 17, body: '#D9715A', belly: '#F4D4C8', fin: '#C25B45', dorsal: 'spiky', tail: 'straight', bigEye: true },
+  atka_mackerel:      { shape: 'fish', h: 13, len: 88, body: '#7C8A55', belly: '#E8E6CF', fin: '#66723F', dorsal: 'smooth', tail: 'fork', bands: { n: 5, color: '#3E4627', opacity: .4 } },
+  brown_croaker:      { shape: 'fish', h: 17, len: 88, body: '#8E826B', belly: '#E6DFCD', fin: '#766B55', dorsal: 'double', tail: 'straight', bigMouth: true },
+  righteye_flounder:  { shape: 'flat', body: '#8B7A5C', belly: '#6E6046', mark: '#5A4E38' },
+  marbled_flounder:   { shape: 'flat', body: '#7D6E52', belly: '#5F533C', mark: '#3E3526' },
+  swordtip_squid:     { shape: 'squid', body: '#D49B84', belly: '#EBC9BA', mark: '#B07560' },
+  giant_octopus:      { shape: 'octopus', body: '#9E4E3E', belly: '#C27766', mark: '#7A382B' },
 }
 const DEFAULT: Fish = { shape: 'fish', h: 17, body: '#8A939B', belly: '#DCE1E5', fin: '#737C84', dorsal: 'smooth', tail: 'fork' }
 
