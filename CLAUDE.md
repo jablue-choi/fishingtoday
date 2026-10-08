@@ -48,5 +48,6 @@
 
 ## 명령
 - 개발: `npm run dev` / 빌드 확인: `npm run build`
+- 배포: https://fishingtoday.vercel.app (Vercel, main에 push하면 자동 배포. 환경변수는 VITE_ 3개만)
 - DB: `npm run db:push` / 함수: `supabase functions deploy <이름>` / 시크릿: `supabase secrets set KEY=값`
 - 작업 후에는 `npm run build`로 타입·빌드 확인하고, 스키마를 바꿨으면 db:push, 함수를 바꿨으면 해당 함수 deploy

@@ -38,7 +38,7 @@
 7. 포인트 데이터: 갯바위 CSV 1076건 적재 완료(mof_rock, 공간정보 EPSG:5179 → proj4 변환). 바다낚시지수 예보 지점은 fishing_index 함수가 캐시 갱신 때 spots에 동기화(khoa_rock/khoa_boat). 홈 "주변 낚시 포인트" 카드(spots_near). **남은 것**: 선상 CSV(boat), 낚시터.csv는 허가 현황이라 좌표 없음 → 카카오 로컬 REST로 주소 지오코딩 필요(허가 종료 행 제외)
 7-1. 낚시금지구역: 국립해양조사원 전자해도 제한구역 Shapefile 25건 적재(0012, scripts/import-ban-zones.mjs). 기록 화면에서 핀이 구역 안이면 경고. 지자체 낚시통제구역은 미포함
 8. 아이콘 최종 선택 → public/ 교체
-9. Vercel 배포 → 카카오(JS 키 도메인, Redirect), Supabase(URL Configuration)에 배포 주소 추가 → 폰 설치 테스트
+9. ~~Vercel 배포~~ 완료 (2026-10-08) https://fishingtoday.vercel.app — main push 시 자동 배포, vercel.json SPA rewrite, 카카오 도메인·Supabase URL Configuration 등록, 폰 로그인·지도·설치 확인
 10. 네이버 로그인 (Supabase 기본 provider 아님 → 엣지 함수로 OAuth 처리)
 
 ## (완료) 시즌별 추천 어종 스펙 — 0009 대신 0010으로 구현
