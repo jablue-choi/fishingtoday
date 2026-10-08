@@ -5,7 +5,7 @@ import { isAdmin, SOURCE_TYPES, sourceLabel, type SourceType } from '../lib/admi
 import { getLastPos } from '../lib/fishingIndex'
 import { regionName } from '../lib/kakaoMap'
 import { fetchPastWeather, PAST_WEATHER_SOURCE } from '../lib/pastWeather'
-import { tideAt } from '../lib/tide'
+import { tideAt, fetchTideTable, nearestTideTimes } from '../lib/tide'
 import MapPicker from '../components/MapPicker'
 import type { AutoFill } from '../lib/weather'
 import { fetchSpecies, type Species } from '../lib/species'
@@ -69,6 +69,8 @@ export default function Admin() {
     setBusy(true); setMsg('')
     try {
       const region = await regionName(pos.lat, pos.lon)
+      // 만조·간조 스냅샷 (조석예보 못 불러와도 등록은 진행)
+      const tideTimes = await fetchTideTable(pos, when).then(t => nearestTideTimes(t.extremes, when)).catch(() => null)
       const { error } = await supabase.rpc('admin_add_catch', {
         p_caught_at: when.toISOString(), p_lat: pos.lat, p_lon: pos.lon, p_region: region,
         p_log_type: form.log_type, p_species_id: zero ? null : form.species_id,
@@ -76,6 +78,7 @@ export default function Admin() {
         p_method_code: zero ? null : form.method_code, p_bait_code: zero ? null : form.bait_code,
         p_weather: auto?.weather ?? null, p_temp_c: auto?.temp_c ?? null, p_wind_dir: auto?.wind_dir ?? null, p_wind_ms: auto?.wind_ms ?? null,
         p_tide_mul: tideAt(pos, when)?.mul ?? null,
+        p_high_tide_at: tideTimes?.high_tide_at ?? null, p_low_tide_at: tideTimes?.low_tide_at ?? null,
         p_source_type: form.source_type, p_source_name: form.source_name, p_source_url: form.source_url, p_memo: form.memo,
       })
       if (error) throw new Error(error.message)
